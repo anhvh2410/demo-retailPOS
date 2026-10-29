@@ -1,0 +1,1284 @@
+<title>Retail POS Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<style>
+/* Bố cục: khung quản trị (thanh menu trái + nội dung), màn POS hai cột giỏ hàng / danh mục */
+:root {
+  --bg: #f4f6fa; --surface: #ffffff; --surface-2: #f8fafc; --line: #e3e8f0; --line-strong: #cbd3df;
+  --fg: #0f172a; --muted: #5b6577; --faint: #94a0b3;
+  --brand: #1b64e0; --brand-strong: #1650b5; --brand-soft: #eaf2ff; --on-brand: #ffffff;
+  --good: #047857; --good-soft: #e7f6ef; --warn: #b45309; --warn-soft: #fdf3e2; --bad: #c62828; --bad-soft: #fdecec;
+  --shopee: #ee4d2d; --tiktok: #111827; --lazada: #1a2d8f;
+  --font-ui: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d1220; --surface: #151c2c; --surface-2: #1a2235; --line: #263049; --line-strong: #34405c;
+  --fg: #e8edf6; --muted: #a2adc2; --faint: #6c7892;
+  --brand: #5b95f7; --brand-strong: #84aff9; --brand-soft: #1b2a48; --on-brand: #0b1220;
+  --good: #4ade9a; --good-soft: #12301f; --warn: #f4b453; --warn-soft: #33260f; --bad: #f87171; --bad-soft: #3a1717;
+  --tiktok: #e8edf6; --lazada: #8b9cf5;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0d1220; --surface: #151c2c; --surface-2: #1a2235; --line: #263049; --line-strong: #34405c;
+  --fg: #e8edf6; --muted: #a2adc2; --faint: #6c7892;
+  --brand: #5b95f7; --brand-strong: #84aff9; --brand-soft: #1b2a48; --on-brand: #0b1220;
+  --good: #4ade9a; --good-soft: #12301f; --warn: #f4b453; --warn-soft: #33260f; --bad: #f87171; --bad-soft: #3a1717;
+  --tiktok: #e8edf6; --lazada: #8b9cf5;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 14px; line-height: 1.5; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--font-mono); font-size: 12px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+
+/* ---------- đăng nhập ---------- */
+.login { min-height: 100%; display: grid; place-items: center; padding-block: 32px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.login-card { width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 32px; display: grid; gap: 20px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
+.brand-mark { width: 34px; height: 34px; border-radius: 9px; background: var(--brand); color: var(--on-brand); display: grid; place-items: center; }
+.role-pick { display: grid; gap: 10px; }
+.role-btn { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: left; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); }
+.role-btn:hover { border-color: var(--brand); background: var(--brand-soft); }
+.role-btn small { display: block; color: var(--muted); font-size: 12px; }
+.demo-note { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+/* ---------- khung ---------- */
+.shell { display: flex; min-height: 100%; }
+.side { width: 232px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--line); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+.side .brand { height: 64px; padding: 0 18px; }
+.nav { flex: 1; padding: 6px 10px; display: grid; gap: 2px; align-content: start; overflow-y: auto; }
+.nav a { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; color: var(--muted); text-decoration: none; font-weight: 500; }
+.nav a:hover { background: var(--surface-2); color: var(--fg); }
+.nav a.on { background: var(--brand-soft); color: var(--brand-strong); }
+.nav svg { width: 17px; height: 17px; flex-shrink: 0; }
+.me { border-top: 1px solid var(--line); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.me small { display: block; color: var(--muted); font-size: 12px; }
+.main { flex: 1; min-width: 0; padding-block: 28px 48px; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
+.topbar { display: none; }
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.page-head h1 { font-size: 22px; font-weight: 650; }
+.page-head p { margin: 2px 0 0; color: var(--muted); }
+.banner { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; font-size: 12.5px; color: var(--muted); background: var(--surface); border: 1px dashed var(--line-strong); border-radius: var(--radius); padding: 8px 14px; margin-bottom: 20px; }
+
+@media (max-width: 860px) {
+  .shell { flex-direction: column; }
+  .side { display: none; }
+  .topbar { display: flex; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); gap: 6px; overflow-x: auto; padding-block: 8px; padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+  .topbar a { white-space: nowrap; padding: 6px 12px; border-radius: 999px; text-decoration: none; color: var(--muted); font-weight: 500; font-size: 13px; }
+  .topbar a.on { background: var(--brand-soft); color: var(--brand-strong); }
+  .main { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 40px; }
+}
+
+/* ---------- thành phần ---------- */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; }
+.card-h { padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.card-h h3 { font-size: 15px; font-weight: 600; }
+.card-b { padding: 16px 18px; }
+.grid { display: grid; gap: 16px; }
+.kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.two { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+@media (max-width: 1100px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .two { grid-template-columns: minmax(0, 1fr); } }
+.kpi { padding: 16px 18px; display: grid; gap: 4px; }
+.kpi .l { color: var(--muted); font-size: 13px; }
+.kpi .v { font-size: 24px; font-weight: 650; letter-spacing: -0.01em; }
+.kpi .h { font-size: 12px; color: var(--muted); }
+.up { color: var(--good); } .down { color: var(--bad); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 16px; border-radius: 8px; border: 1px solid transparent; font-weight: 550; background: var(--brand); color: var(--on-brand); white-space: nowrap; }
+.btn:hover { background: var(--brand-strong); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.sec { background: var(--surface); color: var(--fg); border-color: var(--line-strong); }
+.btn.sec:hover { background: var(--surface-2); }
+.btn.ghost { background: transparent; color: var(--muted); }
+.btn.ghost:hover { background: var(--surface-2); color: var(--fg); }
+.btn.sm { height: 30px; padding: 0 10px; font-size: 13px; }
+.btn.lg { height: 48px; font-size: 15px; }
+.input, .select { height: 38px; width: 100%; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); padding: 0 12px; }
+.input:focus, .select:focus { outline: 2px solid var(--brand-soft); border-color: var(--brand); }
+.field { display: grid; gap: 4px; font-size: 13px; }
+.field > span { font-weight: 500; color: var(--muted); }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+td.r, th.r { text-align: right; }
+td small { display: block; color: var(--muted); font-size: 12px; }
+.pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 550; white-space: nowrap; background: var(--surface-2); color: var(--muted); }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.brand { background: var(--brand-soft); color: var(--brand-strong); }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 16px; overflow-x: auto; }
+.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 14px; color: var(--muted); font-weight: 550; margin-bottom: -1px; white-space: nowrap; }
+.tabs button.on { color: var(--brand-strong); border-color: var(--brand); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.toolbar .input { max-width: 300px; }
+.toolbar .select { max-width: 200px; }
+.empty { padding: 32px; text-align: center; color: var(--muted); }
+.list-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.list-row:last-child { border-bottom: 0; }
+.toast { position: fixed; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-weight: 550; z-index: 50; width: max-content; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,.18); max-width: calc(100% - 32px); }
+
+/* ---------- POS ---------- */
+.pos { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; align-items: start; }
+@media (max-width: 1100px) { .pos { grid-template-columns: minmax(0, 1fr); } .cart { order: -1; position: static; max-height: none; } }
+.cats { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 18px 14px; }
+.chip { border: 1px solid var(--line-strong); background: var(--surface); border-radius: 999px; padding: 4px 12px; font-size: 13px; color: var(--muted); }
+.chip.on { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; padding: 0 18px 18px; }
+.tile { text-align: left; border: 1px solid var(--line); background: var(--surface-2); border-radius: var(--radius); padding: 12px; display: grid; gap: 6px; min-height: 108px; align-content: space-between; }
+.tile:hover { border-color: var(--brand); }
+.tile:disabled { opacity: .45; }
+.tile .n { font-weight: 550; font-size: 13px; line-height: 1.35; }
+.tile { position: relative; }
+.thumb { display: grid; place-items: center; border-radius: 8px; overflow: hidden; background: var(--thumb-bg, var(--surface)); flex: none; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb .e { line-height: 1; }
+.tile .thumb { width: 100%; aspect-ratio: 4 / 3; }
+.tile .thumb .e { font-size: 40px; }
+.tile .promo-tag { position: absolute; top: 8px; left: 8px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 650; padding: 1px 6px; border-radius: 6px; }
+.thumb.sm { width: 36px; height: 36px; } .thumb.sm .e { font-size: 20px; }
+.thumb.lg { width: 96px; height: 96px; } .thumb.lg .e { font-size: 48px; }
+.cat-0 { --thumb-bg: #e6f0ff; } .cat-1 { --thumb-bg: #fff1e0; } .cat-2 { --thumb-bg: #fdf6d8; } .cat-3 { --thumb-bg: #e9f8ef; } .cat-4 { --thumb-bg: #f1ecfd; } .cat-5 { --thumb-bg: #fdebf1; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .thumb { --thumb-bg: var(--surface-2); } }
+:root[data-theme="dark"] .thumb { --thumb-bg: var(--surface-2); }
+.search-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.search-bar .input { flex: 1; min-width: 200px; }
+.promo-line { color: var(--good); }
+.voucher { display: flex; gap: 6px; }
+.voucher .input { height: 30px; font-family: var(--font-mono); font-size: 12.5px; text-transform: uppercase; }
+.tile .p { font-weight: 650; color: var(--brand-strong); }
+.tile .s { font-size: 11.5px; color: var(--muted); }
+.cart { position: sticky; top: 20px; display: flex; flex-direction: column; max-height: calc(100vh - 40px); }
+.cart-items { overflow-y: auto; flex: 1; padding: 4px 18px; min-height: 120px; }
+.ci { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.ci .n { font-weight: 550; font-size: 13px; }
+.qty { display: inline-flex; align-items: center; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; }
+.qty button { width: 28px; height: 28px; border: 0; background: var(--surface-2); }
+.qty span { min-width: 30px; text-align: center; font-weight: 600; }
+.sum { padding: 14px 18px; border-top: 1px solid var(--line); display: grid; gap: 6px; }
+.sum .row { display: flex; justify-content: space-between; gap: 12px; }
+.sum .total { font-size: 20px; font-weight: 700; }
+.scan { display: flex; gap: 8px; padding: 14px 18px; }
+
+/* ---------- hộp thoại ---------- */
+.overlay { position: fixed; inset: 0; background: rgba(8, 12, 22, .55); display: grid; place-items: center; z-index: 40; padding-block: 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.dialog { background: var(--surface); border-radius: 14px; width: 100%; max-width: 460px; max-height: 100%; overflow-y: auto; border: 1px solid var(--line); }
+.dialog .card-b { display: grid; gap: 14px; }
+.methods { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.method { border: 1.5px solid var(--line-strong); background: var(--surface); border-radius: var(--radius); padding: 12px; font-weight: 600; }
+.method.on { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-strong); }
+.quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.qr { display: grid; justify-items: center; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: #ffffff; color: #0f172a; }
+.qr svg { width: 220px; height: 220px; max-width: 100%; }
+.qr .bank { font-size: 12px; text-align: center; color: #475569; }
+.receipt { font-family: var(--font-mono); font-size: 12px; background: var(--surface-2); border: 1px dashed var(--line-strong); border-radius: 8px; padding: 14px; display: grid; gap: 4px; }
+.receipt .row { display: flex; justify-content: space-between; gap: 8px; }
+.receipt hr { border: 0; border-top: 1px dashed var(--line-strong); margin: 6px 0; width: 100%; }
+
+/* ---------- biểu đồ ---------- */
+.chart svg { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--muted); font-size: 11px; font-family: var(--font-ui); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--muted); }
+.bar-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 7px 0; }
+.bar-track { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.bar-fill { height: 100%; background: var(--brand); border-radius: 3px; }
+
+/* ---------- phân quyền / kênh ---------- */
+.matrix td, .matrix th { text-align: center; }
+.matrix td:first-child, .matrix th:first-child { text-align: left; }
+.matrix input { width: 17px; height: 17px; accent-color: var(--brand); }
+.channels { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 1000px) { .channels { grid-template-columns: minmax(0, 1fr); } }
+.seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: none; padding: 6px 12px; color: var(--muted); font-size: 13px; }
+.seg button.on { background: var(--fg); color: var(--bg); font-weight: 600; }
+.stat3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: var(--surface-2); border-radius: 8px; padding: 10px; text-align: center; }
+.stat3 small { display: block; color: var(--muted); font-size: 11.5px; }
+.stat3 b { font-size: 15px; }
+.flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 900px) { .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .flow { grid-template-columns: minmax(0, 1fr); } }
+.flow-step { display: flex; gap: 10px; }
+.flow-step .n { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-strong); font-weight: 650; font-size: 13px; display: grid; place-items: center; }
+.flow-step b { display: block; }
+.flow-step span { color: var(--muted); font-size: 13px; }
+.code-box { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 12px; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.55; max-height: 260px; overflow: auto; white-space: pre; margin: 0; }
+.dialog.wide { max-width: 640px; }
+.sku-input { height: 30px; width: 150px; font-family: var(--font-mono); font-size: 12px; }
+.ch-logo { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div id="app"></div>
+<div id="modal"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+// ===================== Dữ liệu và quyền =====================
+const PERMS = {
+  "order.create": "Tạo đơn, thu tiền",
+  "order.discount": "Giảm giá trên đơn",
+  "order.cancel": "Hủy hoặc hoàn đơn",
+  "product.view": "Xem sản phẩm",
+  "product.manage": "Thêm, sửa sản phẩm",
+  "inventory.manage": "Nhập kho, điều chỉnh tồn",
+  "report.view": "Xem toàn bộ báo cáo doanh thu",
+  "report.view_own": "Xem doanh thu ca của mình",
+  "staff.manage": "Quản lý nhân viên và vai trò",
+  "channel.manage": "Cấu hình kênh online",
+  "store.settings": "Cài đặt cửa hàng, tài khoản VietQR",
+  "promo.manage": "Quản lý chương trình khuyến mãi",
+};
+const STORE_DEFAULT = { name: "Cửa hàng Tiện Lợi Xanh", address: "123 Nguyễn Trãi, Thanh Xuân, Hà Nội", phone: "0243 868 6868", bankBin: "970436", account: "0011004000000", holder: "CUA HANG TIEN LOI XANH" };
+const BANKS = [["970436", "Vietcombank"], ["970415", "VietinBank"], ["970418", "BIDV"], ["970405", "Agribank"], ["970407", "Techcombank"], ["970422", "MB Bank"], ["970416", "ACB"], ["970432", "VPBank"], ["970423", "TPBank"], ["970403", "Sacombank"]];
+const bankName = (bin) => BANKS.find(([b]) => b === bin)?.[1] ?? bin;
+const CHANNEL_INFO = {
+  SHOPEE: { name: "Shopee", color: "var(--shopee)", short: "S" },
+  TIKTOK: { name: "TikTok Shop", color: "var(--tiktok)", short: "T" },
+  LAZADA: { name: "Lazada", color: "var(--lazada)", short: "L" },
+};
+const SOURCE_LABEL = { POS: "Tại quầy", SHOPEE: "Shopee", TIKTOK: "TikTok Shop", LAZADA: "Lazada" };
+const METHOD_LABEL = { CASH: "Tiền mặt", VIETQR: "VietQR", CHANNEL: "Sàn thanh toán" };
+const MOVE_LABEL = { RECEIPT: ["Nhập kho", "good"], SALE: ["Bán tại quầy", "brand"], ONLINE_SALE: ["Bán online", "brand"], ADJUSTMENT: ["Kiểm kê", "warn"], RETURN: ["Hoàn hàng", ""] };
+
+const CATALOG = {
+  "Đồ uống": [["Nước suối Aquafina 500ml", 6000, "chai"], ["Coca-Cola lon 330ml", 10000, "lon"], ["Pepsi lon 330ml", 10000, "lon"], ["Trà xanh 0 độ 455ml", 10000, "chai"], ["Sữa tươi Vinamilk 180ml", 8000, "hộp"], ["Cà phê G7 hòa tan (hộp 18 gói)", 52000, "hộp"], ["Red Bull lon 250ml", 12000, "lon"], ["Nước cam Twister 455ml", 12000, "chai"]],
+  "Bánh kẹo": [["Bánh Oreo 133g", 22000, "gói"], ["Bánh ChocoPie hộp 12 cái", 55000, "hộp"], ["Snack Lay's vị tự nhiên 52g", 15000, "gói"], ["Kẹo Alpenliebe gói 120g", 18000, "gói"], ["Bánh quy Cosy 240g", 32000, "gói"], ["Bánh gạo One One 150g", 25000, "gói"], ["Socola KitKat 4 thanh", 20000, "thanh"], ["Hạt điều rang muối 200g", 75000, "gói"]],
+  "Thực phẩm khô": [["Mì Hảo Hảo tôm chua cay", 4500, "gói"], ["Phở bò Vifon", 9000, "gói"], ["Gạo ST25 túi 5kg", 185000, "túi"], ["Dầu ăn Neptune 1L", 58000, "chai"], ["Nước mắm Nam Ngư 500ml", 36000, "chai"], ["Đường Biên Hòa 1kg", 28000, "gói"], ["Hạt nêm Knorr 400g", 42000, "gói"], ["Cá hộp 3 Cô Gái 155g", 22000, "hộp"]],
+  "Hóa mỹ phẩm": [["Dầu gội Clear 340g", 98000, "chai"], ["Sữa tắm Lifebuoy 850g", 145000, "chai"], ["Kem đánh răng P/S 230g", 38000, "tuýp"], ["Bàn chải Colgate", 25000, "cái"], ["Nước rửa chén Sunlight 750g", 32000, "chai"], ["Bột giặt OMO 800g", 52000, "gói"], ["Giấy vệ sinh Pulppy 10 cuộn", 78000, "lốc"], ["Khăn giấy Kleenex hộp", 28000, "hộp"]],
+  "Gia dụng": [["Pin AA Panasonic vỉ 4", 30000, "vỉ"], ["Bóng đèn LED Rạng Đông 9W", 45000, "cái"], ["Túi rác cuộn 3 cuộn", 25000, "lốc"], ["Hộp nhựa đựng thực phẩm 1L", 35000, "cái"], ["Bật lửa gas", 8000, "cái"], ["Khăn lau đa năng", 15000, "cái"], ["Ly nhựa (50 cái)", 20000, "lốc"], ["Đũa tre (10 đôi)", 12000, "lốc"]],
+  "Văn phòng phẩm": [["Bút bi Thiên Long TL-027", 5000, "cây"], ["Vở kẻ ngang 200 trang", 18000, "quyển"], ["Băng keo trong 5cm", 15000, "cuộn"], ["Kéo văn phòng", 22000, "cái"], ["Giấy A4 Double A 500 tờ", 95000, "ram"], ["Bút dạ quang", 10000, "cây"], ["Hồ dán", 6000, "lọ"], ["Thước kẻ 30cm", 7000, "cái"]],
+};
+
+// Ảnh minh họa mặc định theo từng sản phẩm; cửa hàng có thể tải ảnh thật lên ở trang Sản phẩm
+const ART = ["💧","🥤","🥤","🍵","🥛","☕","⚡","🍊", "🍪","🍫","🍟","🍬","🍪","🍘","🍫","🥜", "🍜","🍲","🍚","🫗","🐟","🧂","🧄","🥫", "🧴","🧴","🪥","🪥","🧽","🧺","🧻","🤧", "🔋","💡","🗑️","🥡","🔥","🧽","🥤","🥢", "🖊️","📒","📦","✂️","📄","🖍️","🧴","📏"];
+const CATS = () => Object.keys(CATALOG);
+function thumb(p, size = "") {
+  const cls = `thumb ${size} cat-${Math.max(0, CATS().indexOf(p.cat))}`;
+  return p.image ? `<span class="${cls}"><img src="${p.image}" alt="${esc(p.name)}"></span>` : `<span class="${cls}" role="img" aria-label="${esc(p.name)}"><span class="e">${p.art || "📦"}</span></span>`;
+}
+function rng(seed) { return () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296; }
+
+function seedState() {
+  const r = rng(42);
+  const products = [];
+  let n = 0;
+  for (const [cat, items] of Object.entries(CATALOG)) {
+    for (const [name, price, unit] of items) {
+      n++;
+      products.push({
+        id: "p" + n, sku: "SP" + String(n).padStart(4, "0"), barcode: "893" + String(1000000000 + n * 7919).slice(0, 10),
+        name, cat, unit, price, cost: Math.round(price * (0.65 + r() * 0.15) / 100) * 100,
+        qty: Math.floor(r() * 120), threshold: 10, active: true, art: ART[n - 1],
+      });
+    }
+  }
+  // Vài mặt hàng sắp hết để dashboard có cảnh báo thật
+  products[4].qty = 6; products[16].qty = 3; products[29].qty = 0; products[41].qty = 8;
+
+  const staff = [
+    { id: "u1", name: "Nguyễn Văn An", email: "chu@demo.vn", role: "owner", active: true },
+    { id: "u2", name: "Trần Thị Bình", email: "quanly@demo.vn", role: "manager", active: true },
+    { id: "u3", name: "Lê Minh Châu", email: "thungan@demo.vn", role: "cashier", active: true },
+    { id: "u4", name: "Phạm Thu Dung", email: "dung@demo.vn", role: "cashier", active: true },
+  ];
+  const roles = {
+    owner: { name: "Chủ cửa hàng", perms: Object.keys(PERMS), locked: true },
+    manager: { name: "Quản lý", perms: ["order.create", "order.discount", "order.cancel", "product.view", "product.manage", "inventory.manage", "report.view", "promo.manage"] },
+    cashier: { name: "Thu ngân", perms: ["order.create", "product.view", "report.view_own"] },
+  };
+
+  const DAY = 86400000, t0 = startOfDay(Date.now());
+  const promos = [
+    { id: "km1", name: "Đồ uống giảm 10%", type: "PERCENT_ITEM", value: 10, scope: "cat", target: "Đồ uống", min: 0, max: 0, code: "", from: t0 - 6 * DAY, to: t0 + 24 * DAY, active: true },
+    { id: "km2", name: "Bánh Oreo mua 3 tặng 1", type: "BUY_X_GET_1", value: 3, scope: "product", target: "p9", min: 0, max: 0, code: "", from: t0 - 3 * DAY, to: t0 + 11 * DAY, active: true },
+    { id: "km3", name: "Đơn từ 300k giảm 20k", type: "FIXED_ORDER", value: 20000, scope: "all", target: "", min: 300000, max: 0, code: "", from: t0 - 20 * DAY, to: t0 + 40 * DAY, active: true },
+    { id: "km4", name: "Mã KHAITRUONG giảm 15%", type: "PERCENT_ORDER", value: 15, scope: "all", target: "", min: 100000, max: 50000, code: "KHAITRUONG", from: t0 - 2 * DAY, to: t0 + 5 * DAY, active: true },
+    { id: "km5", name: "Tri ân tháng trước giảm 5%", type: "PERCENT_ORDER", value: 5, scope: "all", target: "", min: 200000, max: 30000, code: "", from: t0 - 45 * DAY, to: t0 - 21 * DAY, active: true },
+    { id: "km6", name: "Giờ vàng 8h-10h", type: "PERCENT_ORDER", value: 8, scope: "all", target: "", min: 50000, max: 20000, code: "", from: t0 - 10 * DAY, to: t0 + 20 * DAY, active: false },
+  ];
+  // 90 ngày đơn hàng mẫu, nhiều đơn hơn vào cuối tuần; mã đơn đánh số lại mỗi ngày theo giờ bán
+  const orders = [];
+  const now = new Date();
+  for (let d = 89; d >= 0; d--) {
+    const day = new Date(now); day.setDate(now.getDate() - d);
+    const weekend = [0, 6].includes(day.getDay());
+    const count = Math.floor((weekend ? 30 : 18) + r() * 12);
+    const s0 = startOfDay(day.getTime());
+    // Đơn hôm nay rải đều từ đầu ngày tới giờ hiện tại, để trang tổng quan luôn có số liệu
+    const lo = d === 0 && now.getTime() - s0 > 8 * 3600000 ? s0 + 7 * 3600000 : s0;
+    const times = Array.from({ length: count }, () => d === 0 ? lo + r() * (now.getTime() - lo) : s0 + (7 + r() * 14) * 3600000).sort((a, b) => a - b);
+    let seq = 0;
+    for (let i = 0; i < count; i++) {
+      const t = new Date(times[i]);
+      const online = r() < 0.22;
+      const source = online ? ["SHOPEE", "SHOPEE", "TIKTOK"][Math.floor(r() * 3)] : "POS";
+      const items = [];
+      const lines = 1 + Math.floor(r() * 4);
+      for (let k = 0; k < lines; k++) {
+        const p = products[Math.floor(r() * products.length)];
+        if (items.some((x) => x.pid === p.id)) continue;
+        items.push({ pid: p.id, name: p.name, qty: 1 + Math.floor(r() * 3), price: p.price, cost: p.cost });
+      }
+      const subtotal = items.reduce((s, x) => s + x.qty * x.price, 0);
+      // Đơn mẫu tại quầy cũng hưởng khuyến mãi theo đơn đang chạy vào ngày đó
+      const orderPromo = online ? null : promos.find((k) => !k.code && k.active && (k.type === "FIXED_ORDER" || k.type === "PERCENT_ORDER") && t.getTime() >= k.from && t.getTime() < k.to + DAY && subtotal >= k.min);
+      const promoAmount = orderPromo ? promoOrderAmount(orderPromo, subtotal) : 0;
+      const manual = !online && !orderPromo && subtotal > 150000 && r() < 0.2 ? Math.round(subtotal * 0.05 / 1000) * 1000 : 0;
+      const discount = promoAmount + manual;
+      seq++;
+      orders.push({
+        code: orderCode(t, seq), source, items, subtotal, discount, total: subtotal - discount, promos: orderPromo ? [{ id: orderPromo.id, name: orderPromo.name, amount: promoAmount }] : [], external: online ? String(Math.floor(2e14 + r() * 1e14)) : undefined,
+        method: online ? "CHANNEL" : r() < 0.62 ? "CASH" : "VIETQR", status: r() < 0.015 ? "CANCELLED" : "PAID",
+        at: t.getTime(), staff: online ? null : staff[1 + Math.floor(r() * 3)].name,
+      });
+    }
+  }
+
+  const movements = [];
+  for (const o of orders.slice(-40)) for (const it of o.items) movements.push({ at: o.at, pid: it.pid, type: o.source === "POS" ? "SALE" : "ONLINE_SALE", qty: -it.qty, ref: o.code, user: o.staff ?? "Hệ thống" });
+  const rcAt = now.getTime() - 3 * 86400000;
+  for (const p of products.slice(0, 6)) movements.push({ at: rcAt, pid: p.id, type: "RECEIPT", qty: 48, ref: "PN" + ymd(new Date(rcAt)) + "-001", user: "Trần Thị Bình" });
+  movements.sort((a, b) => b.at - a.at);
+
+  return {
+    v: 4, user: null, products, staff, roles, orders, movements, promos,
+    channels: {
+      SHOPEE: { connected: true, since: now.getTime() - 40 * 86400000, secret: randomHex(24, r), map: Object.fromEntries(products.map((p) => [p.id, "SHP-" + p.sku])) },
+      TIKTOK: { connected: true, since: now.getTime() - 40 * 86400000, secret: randomHex(24, r), map: Object.fromEntries(products.filter((_, i) => i % 2 === 0).map((p) => [p.id, "TTS-" + p.sku])) },
+      LAZADA: { connected: false, since: null, secret: randomHex(24, r), map: {} },
+    },
+  };
+}
+function ymd(d) { return d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0"); }
+function orderCode(d, n) { return "DH" + ymd(d) + "-" + String(n).padStart(4, "0"); }
+// Mã kế tiếp trong ngày, như nextOrderCode ở máy chủ
+function nextCode(offset = 1) {
+  const prefix = "DH" + ymd(new Date()) + "-";
+  const last = S.orders.filter((o) => o.code.startsWith(prefix)).reduce((m, o) => Math.max(m, Number(o.code.slice(prefix.length))), 0);
+  return prefix + String(last + offset).padStart(4, "0");
+}
+function randomHex(bytes, r = Math.random) { return Array.from({ length: bytes }, () => Math.floor(r() * 256).toString(16).padStart(2, "0")).join(""); }
+
+const KEY = "retail-pos-demo-v4";
+let S;
+try { S = JSON.parse(localStorage.getItem(KEY)); } catch { S = null; }
+if (!S || S.v !== 4) S = seedState();
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} }
+
+const ui = { days: 30, voucher: "", invQ: "", invFilter: "", orderQ: "", view: "", cart: [], discountPct: 0, q: "", cat: "", payMethod: "CASH", cashGiven: "", tab: {}, orderFilter: "", productQ: "" };
+
+// ===================== Tiện ích =====================
+const vnd = new Intl.NumberFormat("vi-VN");
+const money = (n) => vnd.format(n) + " ₫";
+const short = (n) => n >= 1e6 ? (n / 1e6).toLocaleString("vi-VN", { maximumFractionDigits: 1 }) + " tr" : n >= 1e3 ? Math.round(n / 1e3) + "k" : String(n);
+const timeFmt = new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const store = () => (S.store ??= { ...STORE_DEFAULT });
+const me = () => S.staff.find((u) => u.id === S.user);
+const can = (p) => { const u = me(); return !!u && S.roles[u.role].perms.includes(p); };
+const prod = (id) => S.products.find((p) => p.id === id);
+function startOfDay(t) { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); }
+const paid = () => S.orders.filter((o) => o.status === "PAID");
+
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.hidden = false;
+  clearTimeout(toast.t); toast.t = setTimeout(() => (el.hidden = true), 2600);
+}
+
+const ICON = {
+  dash: '<path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z"/>',
+  pos: '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 12.4a2 2 0 0 0 2 1.6h8.8a2 2 0 0 0 2-1.6L22 7H6"/>',
+  orders: '<path d="M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6M9 15h4"/>',
+  products: '<path d="m21 8-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"/>',
+  inventory: '<path d="M3 21V8l9-5 9 5v13M7 21v-8h10v8M7 17h10"/>',
+  reports: '<path d="M3 3v18h18M7 15v3M12 10v8M17 6v12"/>',
+  staff: '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/>',
+  channels: '<circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M7.3 11 16.7 6M7.3 13l9.4 5"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  promo: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+  logout: '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l5-5-5-5M15 12H3"/>',
+  store: '<path d="M3 9 5 4h14l2 5M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0zM5 13v7h14v-7M10 20v-4h4v4"/>',
+};
+const icon = (k) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
+
+const NAV = [
+  { k: "dashboard", label: "Tổng quan", icon: "dash", any: ["report.view"] },
+  { k: "pos", label: "Bán hàng", icon: "pos", any: ["order.create"] },
+  { k: "orders", label: "Đơn hàng", icon: "orders", any: ["order.create"] },
+  { k: "products", label: "Sản phẩm", icon: "products", any: ["product.view"] },
+  { k: "inventory", label: "Tồn kho", icon: "inventory", any: ["inventory.manage"] },
+  { k: "reports", label: "Báo cáo", icon: "reports", any: ["report.view", "report.view_own"] },
+  { k: "staff", label: "Nhân viên", icon: "staff", any: ["staff.manage"] },
+  { k: "promos", label: "Khuyến mãi", icon: "promo", any: ["promo.manage"] },
+  { k: "channels", label: "Kênh online", icon: "channels", any: ["channel.manage"] },
+  { k: "settings", label: "Cài đặt", icon: "settings", any: ["store.settings"] },
+];
+const allowed = () => NAV.filter((n) => n.any.some(can));
+
+// ===================== VietQR (chuẩn EMVCo của NAPAS) =====================
+function tlv(id, value) { return id + String(value.length).padStart(2, "0") + value; }
+function crc16(s) {
+  let crc = 0xffff;
+  for (let i = 0; i < s.length; i++) {
+    crc ^= s.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) crc = crc & 0x8000 ? ((crc << 1) ^ 0x1021) & 0xffff : (crc << 1) & 0xffff;
+  }
+  return crc.toString(16).toUpperCase().padStart(4, "0");
+}
+function vietQrPayload(amount, note) {
+  const account = tlv("00", "A000000727") + tlv("01", tlv("00", store().bankBin) + tlv("01", store().account)) + tlv("02", "QRIBFTTA");
+  const body = tlv("00", "01") + tlv("01", "12") + tlv("38", account) + tlv("53", "704") + tlv("54", String(amount)) + tlv("58", "VN") + tlv("62", tlv("08", note)) + "6304";
+  return body + crc16(body);
+}
+function qrSvg(text) {
+  try {
+    const qr = qrcode(0, "M"); qr.addData(text); qr.make();
+    return qr.createSvgTag(5, 8);
+  } catch { return `<div class="mono" style="word-break:break-all;max-width:240px">${esc(text)}</div>`; }
+}
+
+// ===================== Nghiệp vụ =====================
+function moveStock(pid, delta, type, ref) {
+  const p = prod(pid); p.qty += delta;
+  S.movements.unshift({ at: Date.now(), pid, type, qty: delta, ref, user: me()?.name ?? "Hệ thống" });
+  if (S.movements.length > 300) S.movements.length = 300;
+}
+// ===================== Khuyến mãi =====================
+const PROMO_TYPE = { PERCENT_ITEM: "Giảm % sản phẩm", BUY_X_GET_1: "Mua X tặng 1", PERCENT_ORDER: "Giảm % đơn hàng", FIXED_ORDER: "Giảm tiền trên đơn" };
+function round1k(n) { return Math.round(n / 1000) * 1000; }
+function promoStatus(k, at = Date.now()) {
+  if (!k.active) return ["Tạm dừng", ""];
+  if (at < k.from) return ["Sắp diễn ra", "warn"];
+  if (at >= k.to + 86400000) return ["Đã kết thúc", ""];
+  return ["Đang chạy", "good"];
+}
+const promoLive = (k) => promoStatus(k)[0] === "Đang chạy";
+const promoHits = (k, p) => k.scope === "all" || (k.scope === "cat" && p.cat === k.target) || (k.scope === "product" && p.id === k.target);
+function promoOrderAmount(k, base) {
+  const raw = k.type === "FIXED_ORDER" ? k.value : round1k((base * k.value) / 100);
+  return Math.min(base, k.max ? Math.min(raw, k.max) : raw);
+}
+function promoLabel(k) {
+  const scope = k.scope === "cat" ? ` nhóm ${k.target}` : k.scope === "product" ? ` ${prod(k.target)?.name ?? ""}` : "";
+  if (k.type === "PERCENT_ITEM") return `Giảm ${k.value}%${scope}`;
+  if (k.type === "BUY_X_GET_1") return `Mua ${k.value} tặng 1${scope}`;
+  const cond = (k.min ? ` cho đơn từ ${short(k.min)}` : "") + (k.max ? `, tối đa ${short(k.max)}` : "");
+  return (k.type === "FIXED_ORDER" ? `Giảm ${short(k.value)}` : `Giảm ${k.value}%`) + " trên đơn" + cond;
+}
+// Tính tiền giỏ hàng: mỗi dòng lấy khuyến mãi sản phẩm có lợi nhất, rồi cả đơn lấy một khuyến mãi theo đơn có lợi nhất
+// (gồm cả mã giảm giá khách nhập), cuối cùng mới tới giảm giá tay của quản lý.
+function itemPromo(p, qty) {
+  let best = null;
+  for (const k of S.promos) {
+    if (!promoLive(k) || k.code || !promoHits(k, p)) continue;
+    const amount = k.type === "PERCENT_ITEM" ? round1k((p.price * qty * k.value) / 100) : k.type === "BUY_X_GET_1" ? Math.floor(qty / (k.value + 1)) * p.price : 0;
+    if (amount > 0 && (!best || amount > best.amount)) best = { id: k.id, name: k.name, amount };
+  }
+  return best;
+}
+function cartTotals() {
+  const lines = ui.cart.map((x) => { const p = prod(x.pid); return { p, qty: x.qty, base: p.price * x.qty, promo: itemPromo(p, x.qty) }; });
+  const subtotal = lines.reduce((s, l) => s + l.base, 0);
+  const applied = lines.filter((l) => l.promo).map((l) => l.promo);
+  const afterItems = subtotal - applied.reduce((s, a) => s + a.amount, 0);
+  const code = ui.voucher.trim().toUpperCase();
+  let orderBest = null, voucherError = "";
+  for (const k of S.promos) {
+    if (k.type !== "PERCENT_ORDER" && k.type !== "FIXED_ORDER") continue;
+    if (k.code && k.code !== code) continue;
+    if (!promoLive(k) || afterItems < k.min) continue;
+    const amount = promoOrderAmount(k, afterItems);
+    if (!orderBest || amount > orderBest.amount) orderBest = { id: k.id, name: k.name, amount };
+  }
+  if (code) {
+    const v = S.promos.find((k) => k.code === code);
+    if (!v) voucherError = "Mã không tồn tại";
+    else if (!promoLive(v)) voucherError = `Mã ${promoStatus(v)[0].toLowerCase()}`;
+    else if (afterItems < v.min) voucherError = `Cần đơn từ ${money(v.min)}`;
+    else if (orderBest?.id !== v.id) voucherError = "Đơn đang hưởng khuyến mãi tốt hơn";
+  }
+  if (orderBest) applied.push(orderBest);
+  const afterPromo = subtotal - applied.reduce((s, a) => s + a.amount, 0);
+  const manual = round1k((afterPromo * ui.discountPct) / 100);
+  const discount = subtotal - afterPromo + manual;
+  return { lines, subtotal, applied, manual, discount, total: subtotal - discount, voucherError, code };
+}
+function addToCart(pid) {
+  const p = prod(pid);
+  const line = ui.cart.find((x) => x.pid === pid);
+  const inCart = line ? line.qty : 0;
+  if (inCart + 1 > p.qty) return toast(`Không đủ hàng: ${p.name} chỉ còn ${p.qty}`);
+  if (line) line.qty++; else ui.cart.push({ pid, qty: 1 });
+  render();
+}
+function checkout(method, cashGiven) {
+  const { subtotal, discount, total, applied, manual } = cartTotals();
+  for (const x of ui.cart) if (x.qty > prod(x.pid).qty) return toast(`Không đủ hàng: ${prod(x.pid).name}`);
+  const order = {
+    code: nextCode(), source: "POS", subtotal, discount, total, method, status: "PAID", at: Date.now(), staff: me().name, promos: applied, manual,
+    items: ui.cart.map((x) => { const p = prod(x.pid); return { pid: p.id, name: p.name, qty: x.qty, price: p.price, cost: p.cost }; }),
+    cashGiven: method === "CASH" ? cashGiven : undefined,
+  };
+  for (const it of order.items) moveStock(it.pid, -it.qty, "SALE", order.code);
+  S.orders.push(order);
+  ui.cart = []; ui.discountPct = 0; ui.cashGiven = ""; ui.voucher = "";
+  save();
+  openReceipt(order);
+  render();
+}
+// Mỗi sàn gửi payload một kiểu; bản demo dựng đúng kiểu đó, ký HMAC-SHA256 bằng secret của kênh,
+// rồi kiểm chữ ký và đổi SKU về sản phẩm như webhook ở máy chủ.
+const PLATFORM = {
+  SHOPEE: { header: "x-shopee-signature", prefix: "SHP", payload: (o) => ({ ordersn: o.external, order_status: "READY_TO_SHIP", create_time: Math.floor(o.at / 1000), buyer_username: o.buyer, recipient_address: { phone: o.phone }, item_list: o.lines.map((l) => ({ model_sku: l.sku, model_quantity_purchased: l.qty, model_discounted_price: l.price })), total_amount: o.total }) },
+  TIKTOK: { header: "x-tts-signature", prefix: "TTS", payload: (o) => ({ type: "ORDER_STATUS_CHANGE", data: { order_id: o.external, order_status: "AWAITING_SHIPMENT", create_time: Math.floor(o.at / 1000), recipient_address: { name: o.buyer, phone_number: o.phone }, line_items: o.lines.map((l) => ({ seller_sku: l.sku, quantity: l.qty, sale_price: l.price })), payment: { currency: "VND", total_amount: o.total } } }) },
+  LAZADA: { header: "x-lazada-signature", prefix: "LZD", payload: (o) => ({ order_number: o.external, statuses: ["pending"], created_at: new Date(o.at).toISOString(), customer_first_name: o.buyer, address_shipping: { phone: o.phone }, items: o.lines.map((l) => ({ sku: l.sku, quantity: l.qty, paid_price: l.price })), price: o.total }) },
+};
+const BUYERS = [["Nguyễn Thu Hà", "0912345678"], ["Trần Quốc Bảo", "0987654321"], ["Lê Ngọc Mai", "0903112233"], ["Phạm Gia Huy", "0938456789"], ["Võ Thanh Tâm", "0977001122"]];
+async function hmacHex(body, secret) {
+  try {
+    const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body));
+    return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  } catch { return randomHex(32); }
+}
+async function simulateOnlineOrder(ch) {
+  const c = S.channels[ch];
+  if (!c.connected) return toast("Hãy kết nối kênh trước khi tạo đơn thử");
+  const pool = S.products.filter((p) => p.active && p.qty > 3 && c.map[p.id]);
+  if (!pool.length) return toast(`${CHANNEL_INFO[ch].name} chưa có sản phẩm nào được liên kết và còn hàng`);
+  const r = Math.random;
+  const picked = [];
+  for (let k = 0, n = Math.min(pool.length, 1 + Math.floor(r() * 3)); picked.length < n && k < 20; k++) {
+    const p = pool[Math.floor(r() * pool.length)];
+    if (!picked.includes(p)) picked.push(p);
+  }
+  const lines = picked.map((p) => ({ sku: c.map[p.id], qty: 1 + Math.floor(r() * 2), price: p.price }));
+  const subtotal = lines.reduce((s, l) => s + l.qty * l.price, 0);
+  const voucher = subtotal >= 100000 && r() < 0.33 ? 10000 : 0;
+  const [buyer, phone] = BUYERS[Math.floor(r() * BUYERS.length)];
+  const ext = { external: PLATFORM[ch].prefix + Date.now(), at: Date.now(), buyer, phone, lines, total: subtotal - voucher };
+  const body = JSON.stringify(PLATFORM[ch].payload(ext), null, 2);
+  const signature = await hmacHex(body, c.secret);
+
+  // Phía nhận: kiểm chữ ký, bỏ qua đơn trùng, đổi SKU sàn về sản phẩm
+  if (signature !== await hmacHex(body, c.secret)) return toast("Sai chữ ký webhook");
+  if (S.orders.some((o) => o.source === ch && o.external === ext.external)) return toast("Đơn đã nhận trước đó");
+  const bySku = Object.fromEntries(Object.entries(c.map).map(([pid, sku]) => [sku, pid]));
+  const items = lines.map((l) => { const p = prod(bySku[l.sku]); return { pid: p.id, name: p.name, qty: l.qty, price: l.price, cost: p.cost }; });
+  const order = { code: nextCode(), source: ch, items, subtotal, discount: voucher, total: ext.total, method: "CHANNEL", status: "PAID", at: ext.at, staff: null, external: ext.external, buyer };
+  for (const it of items) moveStock(it.pid, -it.qty, "ONLINE_SALE", order.code);
+  S.orders.push(order);
+  save();
+  render();
+  modal(`<div class="dialog wide" role="dialog" aria-modal="true" aria-label="Đơn thử đã đổ về">
+    <div class="card-h"><h3>Đơn ${CHANNEL_INFO[ch].name} đã đổ về</h3><button class="btn ghost sm" data-act="close">Đóng</button></div>
+    <div class="card-b">
+      <p style="margin:0;color:var(--muted);font-size:13px">Sàn gửi webhook dưới đây, có chữ ký HMAC-SHA256 theo secret của kênh. Hệ thống kiểm chữ ký, ghép SKU với sản phẩm, rồi tạo đơn <b style="color:var(--fg)">${order.code}</b> (${money(order.total)}) và trừ tồn kho.</p>
+      <div class="mono" style="font-size:11.5px;color:var(--muted);word-break:break-all">POST /api/channels/${ch.toLowerCase()}/webhook<br>${PLATFORM[ch].header}: ${signature}</div>
+      <pre class="code-box">${esc(body)}</pre>
+      <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn sec" data-act="close">Đóng</button><button class="btn" data-act="order" data-code="${order.code}">Xem đơn</button></div>
+    </div></div>`);
+}
+function cancelOrder(code) {
+  const o = S.orders.find((x) => x.code === code);
+  if (!o || o.status !== "PAID") return;
+  o.status = "CANCELLED";
+  for (const it of o.items) moveStock(it.pid, it.qty, "RETURN", o.code);
+  save(); closeModal(); toast(`Đã hủy ${o.code} và cộng lại tồn kho`); render();
+}
+
+// ===================== Khung trang =====================
+function go(view) { location.hash = view; }
+function currentView() {
+  const h = location.hash.replace("#", "");
+  const list = allowed().map((n) => n.k);
+  if (list.includes(h)) return h;
+  return list.includes("dashboard") ? "dashboard" : "pos";
+}
+
+function render() {
+  const app = document.getElementById("app");
+  if (!me()) { app.innerHTML = loginView(); return; }
+  ui.view = currentView();
+  const nav = allowed();
+  const u = me();
+  app.innerHTML = `
+  <div class="shell">
+    <aside class="side">
+      <div class="brand"><span class="brand-mark">${icon("store")}</span>Retail POS</div>
+      <nav class="nav">${nav.map((n) => `<a href="#${n.k}" class="${n.k === ui.view ? "on" : ""}">${icon(n.icon)}${n.label}</a>`).join("")}</nav>
+      <div class="me"><div><b>${esc(u.name)}</b><small>${S.roles[u.role].name}</small></div>
+        <button class="btn ghost sm" data-act="logout" title="Đăng xuất" aria-label="Đăng xuất">${icon("logout").replace("<svg", '<svg width="17" height="17"')}</button></div>
+    </aside>
+    <nav class="topbar">${nav.map((n) => `<a href="#${n.k}" class="${n.k === ui.view ? "on" : ""}">${n.label}</a>`).join("")}<a href="#" data-act="logout">Đăng xuất</a></nav>
+    <main class="main">
+      <div class="banner"><span>Bản demo dùng dữ liệu mẫu, chạy trong trình duyệt của bạn. Đang dùng vai trò <b>${S.roles[u.role].name}</b>.</span>
+        <span style="display:flex;gap:8px"><button class="btn sec sm" data-act="logout">Đổi vai trò</button><button class="btn ghost sm" data-act="reset">Khôi phục dữ liệu mẫu</button></span></div>
+      ${VIEWS[ui.view]()}
+    </main>
+  </div>`;
+  if (ui.view === "pos") document.getElementById("scan")?.focus({ preventScroll: true });
+}
+
+function loginView() {
+  const accounts = S.staff.filter((u) => u.active).slice(0, 3);
+  return `<div class="login"><div class="login-card">
+    <div><div class="brand"><span class="brand-mark">${icon("store")}</span>Retail POS</div>
+    <p style="margin:8px 0 0;color:var(--muted)">Hệ thống bán hàng cho ${esc(store().name)}. Chọn một vai trò để dùng thử.</p></div>
+    <div class="role-pick">${accounts.map((u) => `<button class="role-btn" data-act="login" data-id="${u.id}">
+      <span><b>${S.roles[u.role].name}</b><small>${esc(u.name)} · ${u.email}</small></span>
+      <span class="pill">${S.roles[u.role].perms.length} quyền</span></button>`).join("")}</div>
+    <div class="demo-note">Mỗi vai trò thấy menu và thao tác khác nhau. Thu ngân chỉ bán hàng; quản lý thêm sản phẩm, tồn kho và báo cáo; chủ cửa hàng quản lý cả nhân viên và kênh online.</div>
+  </div></div>`;
+}
+
+function head(title, sub, actions = "") {
+  return `<div class="page-head"><div><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ""}</div>${actions}</div>`;
+}
+
+// ===================== Tổng quan =====================
+function dailySeries(days, filter = () => true) {
+  const out = [];
+  const today = startOfDay(Date.now());
+  for (let i = days - 1; i >= 0; i--) {
+    const from = today - i * 86400000, to = from + 86400000;
+    const list = paid().filter((o) => o.at >= from && o.at < to && filter(o));
+    out.push({ day: from, revenue: list.reduce((s, o) => s + o.total, 0), orders: list.length, pos: list.filter((o) => o.source === "POS").reduce((s, o) => s + o.total, 0) });
+  }
+  return out;
+}
+function barChart(series, { height = 220, stacked = false } = {}) {
+  const W = 720, H = height, L = 48, B = 26, T = 12;
+  const max = Math.max(...series.map((s) => s.revenue), 1);
+  const step = niceStep(max / 4);
+  const top = Math.ceil(max / step) * step;
+  const bw = (W - L - 8) / series.length;
+  const y = (v) => T + (H - T - B) * (1 - v / top);
+  let g = "";
+  for (let v = 0; v <= top; v += step) g += `<line x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${short(v)}</text>`;
+  series.forEach((s, i) => {
+    const x = L + i * bw + bw * 0.18, w = bw * 0.64;
+    const last = i === series.length - 1;
+    if (stacked) {
+      g += `<rect x="${x}" y="${y(s.revenue)}" width="${w}" height="${y(0) - y(s.revenue)}" rx="2" fill="var(--warn)" opacity=".85"><title>Online ${money(s.revenue - s.pos)}</title></rect>`;
+      g += `<rect x="${x}" y="${y(s.pos)}" width="${w}" height="${y(0) - y(s.pos)}" rx="2" fill="var(--brand)"><title>Tại quầy ${money(s.pos)}</title></rect>`;
+    } else {
+      g += `<rect x="${x}" y="${y(s.revenue)}" width="${w}" height="${y(0) - y(s.revenue)}" rx="3" fill="var(--brand)" opacity="${last ? 1 : 0.55}"><title>${new Date(s.day).toLocaleDateString("vi-VN")}: ${money(s.revenue)}</title></rect>`;
+    }
+    const every = series.length > 16 ? Math.ceil(series.length / 8) : 1;
+    if ((i % every === 0 && series.length - 1 - i >= Math.ceil(every / 2)) || last) {
+      const d = new Date(s.day);
+      g += `<text x="${x + w / 2}" y="${H - 8}" text-anchor="middle" ${last ? 'font-weight="600" style="fill:var(--fg)"' : ""}>${d.getDate()}/${d.getMonth() + 1}</text>`;
+    }
+  });
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Biểu đồ doanh thu theo ngày">${g}</svg></div>`;
+}
+const LEGEND = `<div class="legend"><span><span class="dot" style="background:var(--brand)"></span> Tại quầy</span><span><span class="dot" style="background:var(--warn)"></span> Online</span></div>`;
+function progressRows(rows, total) {
+  const max = Math.max(...rows.map((x) => x.value), 1);
+  return rows.map((x) => `<div class="bar-row"><span>${x.label}${x.sub ? ` <span style="color:var(--muted)">· ${x.sub}</span>` : ""}</span><b class="num">${money(x.value)}${total ? ` <span style="color:var(--muted);font-weight:500">(${Math.round((x.value / total) * 100)}%)</span>` : ""}</b><div class="bar-track"><div class="bar-fill" style="width:${(x.value / max) * 100}%"></div></div></div>`).join("");
+}
+function niceStep(raw) {
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  for (const m of [1, 2, 2.5, 5, 10]) if (raw <= m * p) return m * p;
+  return 10 * p;
+}
+function topProducts(orders, n = 5) {
+  const map = new Map();
+  for (const o of orders) for (const it of o.items) {
+    const e = map.get(it.pid) ?? { name: it.name, qty: 0, revenue: 0 };
+    e.qty += it.qty; e.revenue += it.qty * it.price; map.set(it.pid, e);
+  }
+  return [...map.values()].sort((a, b) => b.revenue - a.revenue).slice(0, n);
+}
+
+function dashboardView() {
+  const today = startOfDay(Date.now());
+  const todays = paid().filter((o) => o.at >= today);
+  const yest = paid().filter((o) => o.at >= today - 86400000 && o.at < Date.now() - 86400000);
+  const rev = todays.reduce((s, o) => s + o.total, 0), revY = yest.reduce((s, o) => s + o.total, 0);
+  const change = revY ? Math.round((rev / revY - 1) * 100) : 0;
+  const low = S.products.filter((p) => p.active && p.qty <= p.threshold).sort((a, b) => a.qty - b.qty);
+  const online = todays.filter((o) => o.source !== "POS").length;
+  const series = dailySeries(14);
+  const top = topProducts(paid().filter((o) => o.at >= today - 6 * 86400000));
+  const maxTop = top[0]?.revenue || 1;
+  return head("Tổng quan", `${esc(store().name)} · ${new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "numeric", year: "numeric" })}`) + `
+  <div class="grid kpis">
+    <div class="card kpi"><span class="l">Doanh thu hôm nay</span><span class="v num">${money(rev)}</span><span class="h ${change >= 0 ? "up" : "down"}">${change >= 0 ? "▲" : "▼"} ${Math.abs(change)}% so với hôm qua (giờ này)</span></div>
+    <div class="card kpi"><span class="l">Số đơn hôm nay</span><span class="v num">${todays.length}</span><span class="h">Hôm qua cùng giờ: ${yest.length} đơn · ${online} đơn online hôm nay</span></div>
+    <div class="card kpi"><span class="l">Giá trị đơn trung bình</span><span class="v num">${money(todays.length ? Math.round(rev / todays.length) : 0)}</span><span class="h">Tính trên đơn đã thanh toán</span></div>
+    <div class="card kpi"><span class="l">Cần nhập thêm</span><span class="v num ${low.length ? "down" : ""}">${low.length} mặt hàng</span><span class="h">Tồn bằng hoặc dưới ngưỡng cảnh báo</span></div>
+  </div>
+  <div class="grid two" style="margin-top:16px">
+    <div class="card"><div class="card-h"><h3>Doanh thu 14 ngày</h3>${LEGEND}</div><div class="card-b">${barChart(series, { stacked: true })}</div></div>
+    <div class="card"><div class="card-h"><h3>Sắp hết hàng</h3>${can("inventory.manage") ? '<a class="btn sec sm" href="#inventory">Xem tồn kho</a>' : ""}</div><div class="card-b">
+      ${low.length ? low.slice(0, 6).map((p) => `<div class="list-row"><span>${esc(p.name)}<small style="display:block;color:var(--muted);font-size:12px">${p.sku}</small></span>${stockPill(p)}</div>`).join("") : '<div class="empty">Không có mặt hàng nào sắp hết</div>'}
+    </div></div>
+  </div>
+  <div class="card" style="margin-top:16px"><div class="card-h"><h3>Bán chạy 7 ngày qua</h3></div><div class="card-b">
+    ${top.map((t) => `<div class="bar-row"><span>${esc(t.name)} <span style="color:var(--muted)">· ${t.qty} sp</span></span><b class="num">${money(t.revenue)}</b><div class="bar-track"><div class="bar-fill" style="width:${(t.revenue / maxTop) * 100}%"></div></div></div>`).join("")}
+  </div></div>`;
+}
+function stockPill(p) {
+  if (p.qty <= 0) return `<span class="pill bad">Hết hàng</span>`;
+  if (p.qty <= p.threshold) return `<span class="pill warn">Còn ${p.qty} ${p.unit}</span>`;
+  return `<span class="pill good">${p.qty} ${p.unit}</span>`;
+}
+
+// ===================== Bán hàng =====================
+function posView() {
+  const cats = Object.keys(CATALOG);
+  const q = ui.q.trim().toLowerCase();
+  const list = S.products.filter((p) => p.active && (!ui.cat || p.cat === ui.cat) && (!q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.barcode === q));
+  const { lines, subtotal, applied, manual, total, voucherError, code } = cartTotals();
+  const tagOf = (p) => { const k = S.promos.find((x) => promoLive(x) && !x.code && (x.type === "PERCENT_ITEM" || x.type === "BUY_X_GET_1") && promoHits(x, p)); return k ? (k.type === "PERCENT_ITEM" ? `−${k.value}%` : `Mua ${k.value} tặng 1`) : ""; };
+  return head("Bán hàng", `Thu ngân: ${esc(me().name)}`) + `
+  <div class="pos">
+    <div class="card">
+      <div class="scan">
+        <input id="scan" class="input" placeholder="Quét mã vạch hoặc gõ tên, SKU rồi Enter" value="${esc(ui.q)}" autocomplete="off" aria-label="Tìm sản phẩm">
+        <button class="btn sec" data-act="demo-scan" title="Mô phỏng quét một mã vạch">Quét thử</button>
+      </div>
+      <div class="cats"><button class="chip ${!ui.cat ? "on" : ""}" data-act="cat" data-cat="">Tất cả</button>${cats.map((c) => `<button class="chip ${ui.cat === c ? "on" : ""}" data-act="cat" data-cat="${c}">${c}</button>`).join("")}</div>
+      <div class="tiles">${list.map((p) => `<button class="tile" data-act="add" data-id="${p.id}" ${p.qty <= 0 ? "disabled" : ""}>
+        ${thumb(p)}${tagOf(p) ? `<span class="promo-tag">${tagOf(p)}</span>` : ""}<span class="n">${esc(p.name)}</span><span><span class="p num">${money(p.price)}</span><br><span class="s">${p.qty <= 0 ? "Hết hàng" : `Còn ${p.qty} ${p.unit}`}</span></span></button>`).join("") || '<div class="empty">Không tìm thấy sản phẩm</div>'}</div>
+    </div>
+    <div class="card cart">
+      <div class="card-h"><h3>Giỏ hàng</h3>${ui.cart.length ? `<button class="btn ghost sm" data-act="clear">Xóa giỏ</button>` : ""}</div>
+      <div class="cart-items">${lines.length ? lines.map(({ p, qty: q, promo }) => { const x = { qty: q }; return `<div class="ci">
+        <span class="n">${esc(p.name)}</span><b class="num">${money(p.price * x.qty)}</b>
+        <span style="color:var(--muted);font-size:12px">${money(p.price)} / ${p.unit}${promo ? ` · <span class="promo-line">${esc(promo.name)} −${vnd.format(promo.amount)}</span>` : ""}</span>
+        <span class="qty"><button data-act="dec" data-id="${p.id}" aria-label="Bớt">−</button><span class="num">${x.qty}</span><button data-act="add" data-id="${p.id}" aria-label="Thêm">+</button></span></div>`; }).join("") : '<div class="empty">Chạm vào sản phẩm hoặc quét mã để thêm vào giỏ</div>'}</div>
+      <div class="sum">
+        <div class="row"><span>Tạm tính</span><span class="num">${money(subtotal)}</span></div>
+        ${applied.map((a) => `<div class="row promo-line"><span>${esc(a.name)}</span><span class="num">−${money(a.amount)}</span></div>`).join("")}
+        <div class="row" style="align-items:center"><span>Mã giảm giá</span><span class="voucher"><input id="voucher" class="input" placeholder="Nhập mã" value="${esc(ui.voucher)}" aria-label="Mã giảm giá" style="width:130px"></span></div>
+        ${code && voucherError ? `<div class="row" style="font-size:12px;color:var(--bad)"><span></span><span>${voucherError}</span></div>` : ""}
+        <div class="row" style="align-items:center"><span>Giảm thêm</span>${can("order.discount")
+          ? `<span style="display:flex;gap:6px;align-items:center"><select class="select" id="discount" style="height:30px;width:auto">${[0, 5, 10].map((pc) => `<option value="${pc}" ${ui.discountPct === pc ? "selected" : ""}>${pc ? pc + "%" : "Không"}</option>`).join("")}</select><span class="num">−${money(manual)}</span></span>`
+          : `<span style="color:var(--muted);font-size:12px">Cần quyền quản lý</span>`}</div>
+        <div class="row total"><span>Khách cần trả</span><span class="num">${money(total)}</span></div>
+        <button class="btn lg" data-act="pay" ${ui.cart.length ? "" : "disabled"}>Thanh toán</button>
+      </div>
+    </div>
+  </div>`;
+}
+function openPay() {
+  const { total } = cartTotals();
+  const given = Number(String(ui.cashGiven).replace(/\D/g, "")) || 0;
+  const quick = [...new Set([total, Math.ceil(total / 10000) * 10000, Math.ceil(total / 50000) * 50000, Math.ceil(total / 100000) * 100000, 500000])].filter((v) => v >= total).slice(0, 4);
+  const tempCode = nextCode();
+  modal(`<div class="dialog" role="dialog" aria-modal="true" aria-label="Thanh toán">
+    <div class="card-h"><h3>Thanh toán ${money(total)}</h3><button class="btn ghost sm" data-act="close">Đóng</button></div>
+    <div class="card-b">
+      <div class="methods"><button class="method ${ui.payMethod === "CASH" ? "on" : ""}" data-act="method" data-m="CASH">Tiền mặt</button><button class="method ${ui.payMethod === "VIETQR" ? "on" : ""}" data-act="method" data-m="VIETQR">Chuyển khoản VietQR</button></div>
+      ${ui.payMethod === "CASH" ? `
+        <label class="field"><span>Khách đưa</span><input id="cash" class="input num" inputmode="numeric" value="${given ? vnd.format(given) : ""}" placeholder="${vnd.format(total)}"></label>
+        <div class="quick">${quick.map((v) => `<button class="btn sec sm num" data-act="cash" data-v="${v}">${vnd.format(v)}</button>`).join("")}</div>
+        <div class="sum" style="padding:0;border:0"><div class="row total"><span>Tiền thối lại</span><span class="num ${given && given < total ? "down" : ""}">${given ? (given >= total ? money(given - total) : "Chưa đủ") : "—"}</span></div></div>
+        <button class="btn lg" data-act="confirm-pay" ${given && given < total ? "disabled" : ""}>Hoàn tất, in hóa đơn</button>`
+      : !(store().bankBin && store().account) ? `<div class="empty">Cửa hàng chưa cài tài khoản nhận tiền nên chưa dùng được VietQR.${can("store.settings") ? ' <button class="btn sec sm" data-act="go-settings">Mở Cài đặt</button>' : " Hãy báo chủ cửa hàng."}</div>` : `
+        <div class="qr">${qrSvg(vietQrPayload(total, tempCode))}<div class="bank"><b>${bankName(store().bankBin)}</b> · ${esc(store().account)}<br>${esc(store().holder)}<br>Nội dung: <b>${tempCode}</b></div></div>
+        <p style="margin:0;color:var(--muted);font-size:13px">Mã QR theo chuẩn VietQR của NAPAS, đã kèm số tiền và mã đơn. Khách quét bằng app ngân hàng bất kỳ; thu ngân xác nhận khi thấy tiền về.</p>
+        <button class="btn lg" data-act="confirm-pay">Đã nhận ${money(total)}</button>`}
+    </div></div>`);
+  document.getElementById("cash")?.focus();
+}
+function openReceipt(o) {
+  const given = o.cashGiven || 0;
+  modal(`<div class="dialog" role="dialog" aria-modal="true" aria-label="Hóa đơn">
+    <div class="card-h"><h3>Đã thanh toán</h3><button class="btn ghost sm" data-act="close">Đóng</button></div>
+    <div class="card-b"><div class="receipt">
+      <b style="text-align:center">${esc(store().name.toUpperCase())}</b><span style="text-align:center">${esc(store().address)}</span>${store().phone ? `<span style="text-align:center">ĐT: ${esc(store().phone)}</span>` : ""}<hr>
+      <div class="row"><span>${o.code}</span><span>${timeFmt.format(o.at)}</span></div><div class="row"><span>Thu ngân</span><span>${esc(o.staff ?? "")}</span></div><hr>
+      ${o.items.map((it) => `<div>${esc(it.name)}</div><div class="row"><span>${it.qty} × ${vnd.format(it.price)}</span><span>${vnd.format(it.qty * it.price)}</span></div>`).join("")}<hr>
+      <div class="row"><span>Tạm tính</span><span>${vnd.format(o.subtotal)}</span></div>
+      ${(o.promos ?? []).map((a) => `<div class="row"><span>KM: ${esc(a.name)}</span><span>−${vnd.format(a.amount)}</span></div>`).join("")}
+      ${o.manual ? `<div class="row"><span>Giảm thêm</span><span>−${vnd.format(o.manual)}</span></div>` : ""}
+      <div class="row"><b>TỔNG</b><b>${vnd.format(o.total)}</b></div>
+      <div class="row"><span>${METHOD_LABEL[o.method]}</span><span>${vnd.format(given || o.total)}</span></div>
+      ${given > o.total ? `<div class="row"><span>Tiền thối</span><span>${vnd.format(given - o.total)}</span></div>` : ""}
+      <hr><span style="text-align:center">Cảm ơn quý khách!</span></div>
+      <button class="btn lg" data-act="close">Đơn mới</button></div></div>`);
+}
+
+// ===================== Đơn hàng =====================
+function ordersView() {
+  const mine = !can("report.view");
+  let list = [...S.orders].reverse();
+  if (mine) list = list.filter((o) => o.staff === me().name);
+  if (ui.orderFilter) list = list.filter((o) => (ui.orderFilter === "ONLINE" ? o.source !== "POS" : o.source === ui.orderFilter));
+  const q = ui.orderQ.trim().toLowerCase();
+  if (q) list = list.filter((o) => o.code.toLowerCase().includes(q) || (o.external ?? "").toLowerCase().includes(q) || (o.staff ?? "").toLowerCase().includes(q) || (o.buyer ?? "").toLowerCase().includes(q) || o.items.some((it) => it.name.toLowerCase().includes(q)));
+  const shown = list.slice(0, 60);
+  return head("Đơn hàng", mine ? "Các đơn bạn đã bán" : `${S.orders.length} đơn trong 90 ngày`) + `
+  <div class="card"><div class="toolbar search-bar"><input id="oq" class="input" placeholder="Tìm mã đơn, mã trên sàn, tên sản phẩm hoặc nhân viên" value="${esc(ui.orderQ)}" aria-label="Tìm đơn hàng">${[["", "Tất cả"], ["POS", "Tại quầy"], ["ONLINE", "Online"]].map(([k, l]) => `<button class="chip ${ui.orderFilter === k ? "on" : ""}" data-act="ofilter" data-f="${k}">${l}</button>`).join("")}</div>
+  ${q ? `<div style="padding:0 18px 8px;color:var(--muted);font-size:13px">${list.length} đơn khớp “${esc(ui.orderQ.trim())}”${list.length > 60 ? ", hiện 60 đơn mới nhất" : ""}</div>` : ""}
+  <div class="table-wrap"><table><thead><tr><th>Mã đơn</th><th>Nguồn</th><th>Thời gian</th><th>Thanh toán</th><th class="r">Tổng tiền</th><th>Trạng thái</th></tr></thead><tbody>
+  ${shown.map((o) => `<tr style="cursor:pointer" data-act="order" data-code="${o.code}"><td><b>${o.code}</b><small>${o.items.length} mặt hàng${o.staff ? " · " + esc(o.staff) : ""}</small></td>
+    <td>${sourcePill(o.source)}</td><td class="num">${timeFmt.format(o.at)}</td><td>${METHOD_LABEL[o.method]}</td><td class="r num"><b>${money(o.total)}</b></td>
+    <td>${o.status === "PAID" ? '<span class="pill good">Đã thanh toán</span>' : '<span class="pill bad">Đã hủy</span>'}</td></tr>`).join("")}
+  </tbody></table></div>${shown.length ? "" : `<div class="empty">${q ? "Không có đơn nào khớp" : "Chưa có đơn"}</div>`}</div>`;
+}
+function sourcePill(src) {
+  if (src === "POS") return '<span class="pill">Tại quầy</span>';
+  return `<span class="pill"><span class="dot" style="background:${CHANNEL_INFO[src].color}"></span>${CHANNEL_INFO[src].name}</span>`;
+}
+function openOrder(code) {
+  const o = S.orders.find((x) => x.code === code);
+  modal(`<div class="dialog" role="dialog" aria-modal="true" aria-label="Chi tiết đơn">
+    <div class="card-h"><h3>${o.code}</h3><button class="btn ghost sm" data-act="close">Đóng</button></div>
+    <div class="card-b">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${sourcePill(o.source)}<span class="pill">${METHOD_LABEL[o.method]}</span>${o.status === "PAID" ? '<span class="pill good">Đã thanh toán</span>' : '<span class="pill bad">Đã hủy</span>'}</div>
+      ${o.external ? `<div style="color:var(--muted);font-size:13px">Mã đơn trên sàn: <span class="mono">${o.external}</span></div>` : ""}
+      <div>${o.items.map((it) => `<div class="list-row"><span>${esc(it.name)}<small style="display:block;color:var(--muted);font-size:12px">${it.qty} × ${money(it.price)}</small></span><b class="num">${money(it.qty * it.price)}</b></div>`).join("")}</div>
+      ${(o.promos ?? []).map((a) => `<div class="list-row promo-line"><span>${esc(a.name)}</span><span class="num">−${money(a.amount)}</span></div>`).join("")}
+      ${o.discount - (o.promos ?? []).reduce((s, a) => s + a.amount, 0) > 0 ? `<div class="list-row"><span>${o.source === "POS" ? "Giảm thêm" : "Voucher sàn"}</span><span class="num">−${money(o.discount - (o.promos ?? []).reduce((s, a) => s + a.amount, 0))}</span></div>` : ""}
+      <div class="list-row" style="font-size:16px"><b>Tổng</b><b class="num">${money(o.total)}</b></div>
+      ${o.status === "PAID" ? (can("order.cancel") ? `<button class="btn sec" data-act="cancel-order" data-code="${o.code}">Hủy đơn và cộng lại tồn kho</button>` : `<span style="color:var(--muted);font-size:13px">Hủy đơn cần quyền quản lý.</span>`) : ""}
+    </div></div>`);
+}
+
+// ===================== Sản phẩm =====================
+function productsView() {
+  const manage = can("product.manage");
+  const q = ui.productQ.trim().toLowerCase();
+  const list = S.products.filter((p) => !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.barcode === q);
+  return head("Sản phẩm", `${S.products.length} sản phẩm · ${Object.keys(CATALOG).length} danh mục`, manage ? `<button class="btn" data-act="new-product">+ Thêm sản phẩm</button>` : "") + `
+  <div class="card"><div class="toolbar"><input id="pq" class="input" placeholder="Tìm theo tên, SKU hoặc mã vạch" value="${esc(ui.productQ)}" aria-label="Tìm sản phẩm"></div>
+  <div class="table-wrap"><table><thead><tr><th>Sản phẩm</th><th>Danh mục</th><th class="r">Giá bán</th>${manage ? '<th class="r">Giá vốn</th><th class="r">Lãi gộp</th>' : ""}<th class="r">Tồn kho</th>${manage ? "<th></th>" : ""}</tr></thead><tbody>
+  ${list.map((p) => `<tr><td><span style="display:flex;gap:10px;align-items:center">${thumb(p, "sm")}<span><b>${esc(p.name)}</b><small class="mono">${p.sku} · ${p.barcode}</small></span></span></td><td>${p.cat}</td><td class="r num"><b>${money(p.price)}</b></td>
+    ${manage ? `<td class="r num" style="color:var(--muted)">${money(p.cost)}</td><td class="r num">${Math.round((1 - p.cost / p.price) * 100)}%</td>` : ""}
+    <td class="r">${stockPill(p)}</td>${manage ? `<td class="r"><button class="btn ghost sm" data-act="edit-product" data-id="${p.id}">Sửa</button></td>` : ""}</tr>`).join("")}
+  </tbody></table></div></div>`;
+}
+function openProduct(id) {
+  const p = id ? prod(id) : { name: "", sku: "SP" + String(S.products.length + 1).padStart(4, "0"), barcode: "", cat: "Đồ uống", unit: "cái", price: "", cost: "", qty: 0, threshold: 10 };
+  modal(`<div class="dialog" role="dialog" aria-modal="true" aria-label="Sản phẩm"><form id="pform">
+    <div class="card-h"><h3>${id ? "Sửa sản phẩm" : "Thêm sản phẩm"}</h3><button type="button" class="btn ghost sm" data-act="close">Đóng</button></div>
+    <div class="card-b">
+      <div style="display:flex;gap:14px;align-items:center"><span id="f-thumb">${thumb({ ...p, image: ui.draftImage ?? p.image }, "lg")}</span>
+        <div style="display:grid;gap:6px"><b style="font-size:13px">Ảnh sản phẩm</b><span style="color:var(--muted);font-size:12px">Ảnh hiện ở màn bán hàng. JPG hoặc PNG, tự thu nhỏ còn 240px.</span>
+          <span style="display:flex;gap:6px"><label class="btn sec sm" style="display:inline-flex;align-items:center">Tải ảnh lên<input id="f-image" type="file" accept="image/*" hidden></label>${p.image ? '<button type="button" class="btn ghost sm" data-act="clear-image">Dùng ảnh minh họa</button>' : ""}</span></div></div>
+      <label class="field"><span>Tên sản phẩm</span><input id="f-name" class="input" required value="${esc(p.name)}"></label>
+      <div class="methods"><label class="field"><span>Mã SKU</span><input id="f-sku" class="input" required value="${esc(p.sku)}"></label><label class="field"><span>Mã vạch</span><input id="f-barcode" class="input" inputmode="numeric" value="${esc(p.barcode)}"></label></div>
+      <div class="methods"><label class="field"><span>Danh mục</span><select id="f-cat" class="select">${Object.keys(CATALOG).map((c) => `<option ${c === p.cat ? "selected" : ""}>${c}</option>`).join("")}</select></label><label class="field"><span>Đơn vị</span><input id="f-unit" class="input" value="${esc(p.unit)}"></label></div>
+      <div class="methods"><label class="field"><span>Giá bán (đ)</span><input id="f-price" class="input num" inputmode="numeric" required value="${p.price}"></label><label class="field"><span>Giá vốn (đ)</span><input id="f-cost" class="input num" inputmode="numeric" value="${p.cost}"></label></div>
+      ${id ? "" : `<label class="field"><span>Tồn đầu kỳ</span><input id="f-qty" class="input num" inputmode="numeric" value="0"></label>`}
+      <p id="f-err" class="down" style="margin:0" hidden></p>
+      <button class="btn lg" type="submit">${id ? "Lưu thay đổi" : "Thêm sản phẩm"}</button>
+    </div></form></div>`);
+  ui.draftImage = undefined; ui.editing = p;
+  document.getElementById("f-image").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const bmp = await createImageBitmap(file);
+      const size = 240, c = document.createElement("canvas"); c.width = c.height = size;
+      const k = Math.max(size / bmp.width, size / bmp.height);
+      c.getContext("2d").drawImage(bmp, (size - bmp.width * k) / 2, (size - bmp.height * k) / 2, bmp.width * k, bmp.height * k);
+      ui.draftImage = c.toDataURL("image/jpeg", 0.8);
+      document.getElementById("f-thumb").innerHTML = thumb({ ...p, image: ui.draftImage }, "lg");
+    } catch { toast("Không đọc được ảnh này"); }
+  });
+  document.getElementById("pform").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const v = (k) => document.getElementById("f-" + k).value.trim();
+    const err = (m) => { const el = document.getElementById("f-err"); el.textContent = m; el.hidden = false; };
+    const sku = v("sku").toUpperCase(), price = Number(v("price").replace(/\D/g, "")), cost = Number(v("cost").replace(/\D/g, "")) || 0;
+    if (!v("name")) return err("Vui lòng nhập tên sản phẩm");
+    if (!price) return err("Giá bán phải lớn hơn 0");
+    if (S.products.some((x) => x.sku === sku && x.id !== id)) return err(`Mã SKU ${sku} đã tồn tại`);
+    const data = { name: v("name"), sku, barcode: v("barcode"), cat: v("cat"), unit: v("unit") || "cái", price, cost };
+    if (ui.draftImage !== undefined) data.image = ui.draftImage;
+    if (id) Object.assign(prod(id), data);
+    else {
+      const np = { id: "p" + Date.now(), ...data, qty: 0, threshold: 10, active: true };
+      S.products.push(np);
+      const q0 = Number(v("qty")) || 0;
+      if (q0 > 0) moveStock(np.id, q0, "RECEIPT", "Tồn đầu kỳ");
+    }
+    save(); closeModal(); toast(id ? "Đã lưu sản phẩm" : `Đã thêm ${data.name}`); render();
+  });
+}
+
+// ===================== Tồn kho =====================
+function inventoryView() {
+  const tab = ui.tab.inventory || "stock";
+  const low = S.products.filter((p) => p.qty <= p.threshold).length;
+  const q = ui.invQ.trim().toLowerCase();
+  const hit = (p) => !!p && (!q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.barcode === q);
+  const bar = `<div class="toolbar search-bar"><input id="iq" class="input" placeholder="Tìm sản phẩm theo tên, SKU hoặc mã vạch" value="${esc(ui.invQ)}" aria-label="Tìm sản phẩm trong kho">${tab === "stock" ? [["", "Tất cả"], ["low", "Sắp hết"], ["out", "Hết hàng"]].map(([k, l]) => `<button class="chip ${ui.invFilter === k ? "on" : ""}" data-act="ifilter" data-f="${k}">${l}</button>`).join("") : ""}</div>`;
+  let body;
+  if (tab === "history") {
+    body = `<div class="table-wrap"><table><thead><tr><th>Thời gian</th><th>Sản phẩm</th><th>Loại</th><th class="r">Số lượng</th><th>Chứng từ</th><th>Người thực hiện</th></tr></thead><tbody>
+    ${S.movements.filter((m) => hit(prod(m.pid))).slice(0, 80).map((m) => `<tr><td class="num" style="color:var(--muted)">${timeFmt.format(m.at)}</td><td>${esc(prod(m.pid)?.name ?? "")}</td><td><span class="pill ${MOVE_LABEL[m.type][1]}">${MOVE_LABEL[m.type][0]}</span></td>
+      <td class="r num ${m.qty > 0 ? "up" : "down"}"><b>${m.qty > 0 ? "+" : ""}${m.qty}</b></td><td class="mono">${esc(m.ref)}</td><td>${esc(m.user)}</td></tr>`).join("")}</tbody></table></div>`;
+  } else {
+    const list = S.products.filter((p) => hit(p) && (ui.invFilter !== "low" || p.qty <= p.threshold) && (ui.invFilter !== "out" || p.qty <= 0)).sort((a, b) => Number(b.qty <= b.threshold) - Number(a.qty <= a.threshold) || a.qty - b.qty);
+    body = `<div class="table-wrap"><table><thead><tr><th>Sản phẩm</th><th class="r">Tồn kho</th><th class="r">Ngưỡng</th><th>Tình trạng</th><th class="r">Thao tác</th></tr></thead><tbody>
+    ${list.map((p) => `<tr><td><span style="display:flex;gap:10px;align-items:center">${thumb(p, "sm")}<span><b>${esc(p.name)}</b><small class="mono">${p.sku}</small></span></span></td><td class="r num"><b>${p.qty}</b> ${p.unit}</td><td class="r num" style="color:var(--muted)">${p.threshold}</td><td>${stockPill(p)}</td>
+      <td class="r" style="white-space:nowrap"><button class="btn sec sm" data-act="receive" data-id="${p.id}">Nhập thêm</button> <button class="btn ghost sm" data-act="count" data-id="${p.id}">Kiểm kê</button></td></tr>`).join("")}</tbody></table></div>${list.length ? "" : '<div class="empty">Không tìm thấy sản phẩm</div>'}`;
+  }
+  return head("Tồn kho", low ? `${low} sản phẩm cần nhập thêm` : "Không có sản phẩm nào sắp hết") + `
+  <div class="tabs">${[["stock", "Tồn kho"], ["history", "Sổ biến động kho"]].map(([k, l]) => `<button class="${tab === k ? "on" : ""}" data-act="tab" data-scope="inventory" data-tab="${k}">${l}</button>`).join("")}</div>
+  <div class="card">${bar}${body}</div>`;
+}
+function openStock(id, mode) {
+  const p = prod(id);
+  modal(`<div class="dialog" role="dialog" aria-modal="true"><form id="sform">
+    <div class="card-h"><h3>${mode === "receive" ? "Nhập kho" : "Kiểm kê"}: ${esc(p.name)}</h3><button type="button" class="btn ghost sm" data-act="close">Đóng</button></div>
+    <div class="card-b">
+      <p style="margin:0;color:var(--muted)">Tồn hiện tại: <b style="color:var(--fg)">${p.qty} ${p.unit}</b></p>
+      ${mode === "receive"
+        ? `<div class="methods"><label class="field"><span>Số lượng nhập</span><input id="s-qty" class="input num" inputmode="numeric" value="24" required></label><label class="field"><span>Giá nhập (đ)</span><input id="s-cost" class="input num" inputmode="numeric" value="${p.cost}"></label></div><label class="field"><span>Nhà cung cấp</span><input id="s-sup" class="input" value="NPP Hòa Phát"></label>`
+        : `<label class="field"><span>Số đếm thực tế</span><input id="s-qty" class="input num" inputmode="numeric" value="${p.qty}" required></label><p style="margin:0;color:var(--muted);font-size:13px">Chênh lệch sẽ ghi vào sổ biến động kho dưới dạng kiểm kê.</p>`}
+      <button class="btn lg" type="submit">${mode === "receive" ? "Nhập kho" : "Lưu kiểm kê"}</button></div></form></div>`);
+  document.getElementById("sform").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const n = Number(document.getElementById("s-qty").value.replace(/\D/g, ""));
+    if (mode === "receive") {
+      if (!n) return;
+      const cost = Number(document.getElementById("s-cost").value.replace(/\D/g, "")) || p.cost;
+      const code = "PN" + ymd(new Date()) + "-" + String(S.movements.filter((m) => m.type === "RECEIPT").length + 1).padStart(3, "0");
+      p.cost = cost; moveStock(id, n, "RECEIPT", code); toast(`Đã nhập ${n} ${p.unit}, phiếu ${code}`);
+    } else {
+      const delta = n - p.qty;
+      if (delta) moveStock(id, delta, "ADJUSTMENT", "Kiểm kê");
+      toast(delta ? `Đã điều chỉnh ${delta > 0 ? "+" : ""}${delta}` : "Không có chênh lệch");
+    }
+    save(); closeModal(); render();
+  });
+}
+
+// ===================== Báo cáo =====================
+function reportsView() {
+  const own = !can("report.view");
+  const filter = own ? (o) => o.staff === me().name : () => true;
+  const days = ui.days;
+  const since = startOfDay(Date.now()) - (days - 1) * 86400000;
+  const list = paid().filter((o) => o.at >= since && filter(o));
+  const revenue = list.reduce((s, o) => s + o.total, 0);
+  const discount = list.reduce((s, o) => s + o.discount, 0);
+  const cogs = list.reduce((s, o) => s + o.items.reduce((a, it) => a + it.qty * it.cost, 0), 0);
+  const profit = revenue - cogs;
+  const group = (key) => Object.values(list.reduce((m, o) => { const k = key(o); if (k == null) return m; (m[k] ??= { k, value: 0, count: 0 }); m[k].value += o.total; m[k].count++; return m; }, {})).sort((a, b) => b.value - a.value);
+  const bySource = group((o) => o.source);
+  const byMethod = group((o) => o.method);
+  const byStaff = group((o) => o.staff);
+  const prodMap = new Map();
+  for (const o of list) for (const it of o.items) {
+    const e = prodMap.get(it.pid) ?? { name: it.name, unit: prod(it.pid)?.unit ?? "", qty: 0, value: 0, profit: 0 };
+    e.qty += it.qty; e.value += it.qty * it.price; e.profit += it.qty * (it.price - it.cost); prodMap.set(it.pid, e);
+  }
+  const top = [...prodMap.values()].sort((a, b) => b.value - a.value).slice(0, 10);
+  const seg = `<div class="seg" role="group" aria-label="Khoảng thời gian">${[7, 30, 90].map((d) => `<button class="${d === days ? "on" : ""}" data-act="days" data-d="${d}">${d} ngày</button>`).join("")}</div>`;
+  return head("Báo cáo doanh thu", own ? `Doanh thu các đơn ${esc(me().name)} bán, ${days} ngày gần nhất` : `${days} ngày gần nhất, chỉ tính đơn đã thanh toán`, seg) + `
+  <div class="grid kpis">
+    <div class="card kpi"><span class="l">Doanh thu</span><span class="v num">${money(revenue)}</span><span class="h">${list.length} đơn đã thanh toán</span></div>
+    ${own ? `<div class="card kpi"><span class="l">Số đơn</span><span class="v num">${list.length}</span><span class="h">Không hiện lợi nhuận với vai trò thu ngân</span></div>`
+      : `<div class="card kpi"><span class="l">Lợi nhuận gộp</span><span class="v num">${money(profit)}</span><span class="h">Biên ${revenue ? Math.round((profit / revenue) * 100) : 0}%, theo giá vốn lúc bán</span></div>`}
+    <div class="card kpi"><span class="l">Giá trị đơn trung bình</span><span class="v num">${money(list.length ? Math.round(revenue / list.length) : 0)}</span><span class="h">&nbsp;</span></div>
+    <div class="card kpi"><span class="l">Trung bình mỗi ngày</span><span class="v num">${money(Math.round(revenue / days))}</span><span class="h">Đã giảm giá ${money(discount)}</span></div>
+  </div>
+  <div class="card" style="margin-top:16px"><div class="card-h"><h3>Doanh thu theo ngày</h3>${LEGEND}</div>
+    <div class="card-b">${barChart(dailySeries(days, filter), { stacked: true })}</div></div>
+  <div class="grid two" style="margin-top:16px">
+    <div class="card"><div class="card-h"><h3>Top sản phẩm</h3></div><div class="card-b">${top.length ? progressRows(top.map((t) => ({ label: esc(t.name), sub: `${t.qty} ${t.unit}${own ? "" : ` · lãi ${vnd.format(t.profit)} ₫`}`, value: t.value }))) : '<div class="empty">Chưa có dữ liệu</div>'}</div></div>
+    <div style="display:grid;gap:16px;align-content:start">
+      <div class="card"><div class="card-h"><h3>Theo kênh bán</h3></div><div class="card-b">${progressRows(bySource.map((x) => ({ label: SOURCE_LABEL[x.k], sub: `${x.count} đơn`, value: x.value })), revenue) || '<div class="empty">Chưa có dữ liệu</div>'}</div></div>
+      <div class="card"><div class="card-h"><h3>Theo hình thức thanh toán</h3></div><div class="table-wrap"><table><thead><tr><th>Hình thức</th><th class="r">Số giao dịch</th><th class="r">Số tiền</th></tr></thead><tbody>
+        ${byMethod.map((x) => `<tr><td>${METHOD_LABEL[x.k]}</td><td class="r num">${x.count}</td><td class="r num">${money(x.value)}</td></tr>`).join("")}</tbody></table></div></div>
+      ${own ? "" : `<div class="card"><div class="card-h"><h3>Theo nhân viên bán tại quầy</h3></div><div class="table-wrap"><table><thead><tr><th>Nhân viên</th><th class="r">Số đơn</th><th class="r">Doanh thu</th></tr></thead><tbody>
+        ${byStaff.map((x) => `<tr><td>${esc(x.k)}</td><td class="r num">${x.count}</td><td class="r num">${money(x.value)}</td></tr>`).join("")}</tbody></table></div></div>`}
+    </div>
+  </div>`;
+}
+
+// ===================== Nhân viên =====================
+function staffView() {
+  const roleKeys = Object.keys(S.roles);
+  return head("Nhân viên và phân quyền", `${S.staff.length} tài khoản · ${roleKeys.length} vai trò`) + `
+  <div class="card"><div class="table-wrap"><table><thead><tr><th>Nhân viên</th><th>Vai trò</th><th>Trạng thái</th><th class="r"></th></tr></thead><tbody>
+  ${S.staff.map((u) => { const self = u.id === S.user; return `<tr><td><b>${esc(u.name)}</b>${self ? ' <span style="color:var(--faint);font-size:12px">(bạn)</span>' : ""}<small>${u.email}</small></td>
+    <td><select class="select" style="height:32px;width:auto" data-act="role" data-id="${u.id}" ${self ? "disabled" : ""}>${roleKeys.map((k) => `<option value="${k}" ${u.role === k ? "selected" : ""}>${S.roles[k].name}</option>`).join("")}</select></td>
+    <td>${u.active ? '<span class="pill good">Đang làm</span>' : '<span class="pill">Đã khóa</span>'}</td>
+    <td class="r"><button class="btn sec sm" data-act="toggle-staff" data-id="${u.id}" ${self ? "disabled" : ""}>${u.active ? "Khóa" : "Mở khóa"}</button></td></tr>`; }).join("")}
+  </tbody></table></div></div>
+  <div class="card" style="margin-top:16px"><div class="card-h"><div><h3>Ma trận phân quyền</h3><p style="margin:2px 0 0;color:var(--muted);font-size:13px">Bấm để bật tắt quyền. Vai trò chủ cửa hàng được khóa để không ai tự mất quyền quản trị.</p></div></div>
+  <div class="table-wrap"><table class="matrix"><thead><tr><th>Quyền</th>${roleKeys.map((k) => `<th>${S.roles[k].name}${S.roles[k].locked ? " (khóa)" : ""}<br><span style="font-weight:400;text-transform:none;letter-spacing:0">${S.staff.filter((u) => u.role === k).length} người</span></th>`).join("")}</tr></thead><tbody>
+  ${Object.entries(PERMS).map(([p, label]) => `<tr><td>${label}</td>${roleKeys.map((k) => `<td><input type="checkbox" aria-label="${label}: ${S.roles[k].name}" data-act="perm" data-role="${k}" data-perm="${p}" ${S.roles[k].perms.includes(p) ? "checked" : ""} ${S.roles[k].locked || p === "staff.manage" ? "disabled" : ""}></td>`).join("")}</tr>`).join("")}
+  </tbody></table></div></div>`;
+}
+
+// ===================== Kênh online =====================
+const FLOW = [["Sàn gửi webhook", "Có đơn mới, sàn gọi về địa chỉ riêng của từng kênh"], ["Kiểm chữ ký", "HMAC-SHA256 theo secret của kênh, sai là từ chối"], ["Đổi SKU", "SKU trên sàn được ghép với sản phẩm qua bảng liên kết"], ["Tạo đơn, trừ kho", "Đơn online vào chung sổ đơn, báo cáo và tồn kho"]];
+function channelsView() {
+  const recent = [...S.orders].filter((o) => o.source !== "POS").sort((a, b) => b.at - a.at).slice(0, 8);
+  const since = startOfDay(Date.now()) - 29 * 86400000;
+  return head("Kênh bán online", "Đơn từ Shopee, TikTok Shop, Lazada tự đổ về và trừ chung tồn kho (bản mô phỏng)") + `
+  <div class="grid channels">${Object.entries(CHANNEL_INFO).map(([k, c]) => { const st = S.channels[k]; const list = paid().filter((o) => o.source === k && o.at >= since); const rev = list.reduce((s, o) => s + o.total, 0); return `
+    <div class="card"><div class="card-b" style="display:grid;gap:14px">
+      <div style="display:flex;gap:12px;align-items:center"><span class="ch-logo" style="background:${c.color};color:var(--bg)">${c.short}</span>
+        <div style="flex:1;min-width:0"><b>${c.name}</b><small style="display:block;color:var(--muted);font-size:12px">${st.connected && st.since ? "Kết nối từ " + new Date(st.since).toLocaleDateString("vi-VN") : "Chưa kết nối"}</small></div>
+        ${st.connected ? '<span class="pill good">Đang kết nối</span>' : '<span class="pill">Ngắt</span>'}</div>
+      <div class="stat3"><div><small>Đơn 30 ngày</small><b class="num">${list.length}</b></div><div><small>Doanh thu</small><b class="num">${rev ? short(rev) : "0"}</b></div><div><small>SP liên kết</small><b class="num">${Object.keys(st.map).length}</b></div></div>
+      <div style="display:flex;gap:8px;align-items:center">${st.connected
+        ? `<button class="btn sm" data-act="sim" data-ch="${k}">Tạo đơn thử</button><button class="btn sec sm" data-act="mapping" data-ch="${k}">Liên kết sản phẩm</button><button class="btn ghost sm" style="margin-left:auto" title="Ngắt kết nối" data-act="disconnect" data-ch="${k}">Ngắt</button>`
+        : `<button class="btn sm" data-act="connect" data-ch="${k}">Kết nối</button>`}</div>
+    </div></div>`; }).join("")}</div>
+  <div class="card" style="margin-top:16px"><div class="card-h"><h3>Đơn đổ về như thế nào</h3></div><div class="card-b flow">
+    ${FLOW.map(([t, d], i) => `<div class="flow-step"><span class="n">${i + 1}</span><div><b>${t}</b><span>${d}</span></div></div>`).join("")}</div></div>
+  <div class="card" style="margin-top:16px"><div class="card-h"><h3>Đơn online gần đây</h3></div><div class="table-wrap"><table><thead><tr><th>Mã đơn</th><th>Kênh</th><th>Mã trên sàn</th><th>Thời gian</th><th class="r">Tổng tiền</th></tr></thead><tbody>
+  ${recent.map((o) => `<tr style="cursor:pointer" data-act="order" data-code="${o.code}"><td><b>${o.code}</b><small>${o.items.length} sản phẩm</small></td><td>${sourcePill(o.source)}</td><td class="mono" style="font-size:12px;color:var(--muted)">${o.external ?? ""}</td><td class="num">${timeFmt.format(o.at)}</td><td class="r num"><b>${money(o.total)}</b></td></tr>`).join("")}
+  </tbody></table></div></div>
+  <p style="color:var(--muted);font-size:12.5px;margin-top:12px">Bản MVP chạy kết nối mô phỏng. Kết nối thật với từng sàn cần đăng ký đối tác; phần nhận đơn đã thiết kế theo một chuẩn chung để cắm sàn thật vào sau.</p>`;
+}
+function openMapping(ch) {
+  const st = S.channels[ch], c = CHANNEL_INFO[ch];
+  const rows = S.products.filter((p) => p.active);
+  const mapped = rows.filter((p) => st.map[p.id]).length;
+  modal(`<div class="dialog wide" role="dialog" aria-modal="true" aria-label="Liên kết sản phẩm">
+    <div class="card-h"><h3>${c.name}: liên kết sản phẩm</h3><button class="btn ghost sm" data-act="close">Đóng</button></div>
+    <div class="card-b">
+      <div style="display:grid;gap:4px;font-size:12.5px;color:var(--muted)">
+        <span>Địa chỉ nhận đơn: <span class="mono" style="color:var(--fg)">POST /api/channels/${ch.toLowerCase()}/webhook</span></span>
+        <span>Header chữ ký: <span class="mono" style="color:var(--fg)">${PLATFORM[ch].header}</span> · Secret: <span class="mono" style="color:var(--fg)">${st.secret.slice(0, 6)}••••••••••••</span></span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span>Đã liên kết <b>${mapped}</b>/${rows.length} sản phẩm</span>
+        <button class="btn sec sm" data-act="automap" data-ch="${ch}" ${mapped === rows.length ? "disabled" : ""}>Liên kết tự động (${PLATFORM[ch].prefix}-mã SP)</button></div>
+      <div class="table-wrap" style="max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:8px"><table><thead><tr><th>Sản phẩm</th><th class="r">Tồn</th><th>SKU trên sàn</th></tr></thead><tbody>
+        ${rows.map((p) => `<tr><td><b>${esc(p.name)}</b><small>${p.sku}</small></td><td class="r num">${p.qty}</td><td><input class="input sku-input" aria-label="SKU trên sàn của ${esc(p.name)}" placeholder="Chưa liên kết" data-act="sku" data-ch="${ch}" data-id="${p.id}" value="${esc(st.map[p.id] ?? "")}"></td></tr>`).join("")}
+      </tbody></table></div>
+    </div></div>`);
+}
+
+// ===================== Khuyến mãi =====================
+const dFmt = (t) => new Date(t).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+function promoStats(k) {
+  let count = 0, amount = 0;
+  for (const o of S.orders) if (o.status === "PAID") for (const a of o.promos ?? []) if (a.id === k.id) { count++; amount += a.amount; }
+  return { count, amount };
+}
+function promosView() {
+  const list = [...S.promos].sort((a, b) => ["Đang chạy", "Sắp diễn ra", "Tạm dừng", "Đã kết thúc"].indexOf(promoStatus(a)[0]) - ["Đang chạy", "Sắp diễn ra", "Tạm dừng", "Đã kết thúc"].indexOf(promoStatus(b)[0]));
+  const running = S.promos.filter(promoLive).length;
+  const since = startOfDay(Date.now()) - 29 * 86400000;
+  const recent = paid().filter((o) => o.at >= since && o.promos?.length);
+  const given = recent.reduce((s, o) => s + o.promos.reduce((a, x) => a + x.amount, 0), 0);
+  return head("Khuyến mãi", "Tự áp dụng ở màn bán hàng; mã giảm giá thì khách đọc cho thu ngân nhập", '<button class="btn" data-act="new-promo">+ Tạo khuyến mãi</button>') + `
+  <div class="grid kpis">
+    <div class="card kpi"><span class="l">Đang chạy</span><span class="v num">${running}</span><span class="h">trên ${S.promos.length} chương trình</span></div>
+    <div class="card kpi"><span class="l">Đơn hưởng khuyến mãi</span><span class="v num">${recent.length}</span><span class="h">30 ngày gần nhất</span></div>
+    <div class="card kpi"><span class="l">Tiền đã giảm</span><span class="v num">${money(given)}</span><span class="h">30 ngày gần nhất</span></div>
+    <div class="card kpi"><span class="l">Doanh thu đơn có KM</span><span class="v num">${money(recent.reduce((s, o) => s + o.total, 0))}</span><span class="h">Giá trị TB ${money(recent.length ? Math.round(recent.reduce((s, o) => s + o.total, 0) / recent.length) : 0)}</span></div>
+  </div>
+  <div class="card" style="margin-top:16px"><div class="table-wrap"><table><thead><tr><th>Chương trình</th><th>Loại</th><th>Thời gian</th><th class="r">Đã dùng</th><th class="r">Đã giảm</th><th>Trạng thái</th><th class="r"></th></tr></thead><tbody>
+  ${list.map((k) => { const [st, tone] = promoStatus(k); const u = promoStats(k); return `<tr><td><b>${esc(k.name)}</b><small>${esc(promoLabel(k))}${k.code ? ` · mã <span class="mono">${esc(k.code)}</span>` : ""}</small></td>
+    <td style="white-space:nowrap">${PROMO_TYPE[k.type]}</td><td class="num" style="white-space:nowrap">${dFmt(k.from)} – ${dFmt(k.to)}</td><td class="r num">${u.count}</td><td class="r num" style="white-space:nowrap">${money(u.amount)}</td>
+    <td><span class="pill ${tone}">${st}</span></td>
+    <td class="r" style="white-space:nowrap"><button class="btn ghost sm" data-act="edit-promo" data-id="${k.id}">Sửa</button> ${st === "Đã kết thúc" ? "" : `<button class="btn sec sm" data-act="toggle-promo" data-id="${k.id}">${k.active ? "Tạm dừng" : "Bật lại"}</button>`}</td></tr>`; }).join("")}
+  </tbody></table></div></div>
+  <p style="color:var(--muted);font-size:12.5px;margin-top:12px">Quy tắc cộng dồn: mỗi sản phẩm hưởng một khuyến mãi sản phẩm có lợi nhất; cả đơn hưởng thêm một khuyến mãi theo đơn có lợi nhất (gồm mã giảm giá); giảm giá tay của quản lý tính sau cùng.</p>`;
+}
+function openPromo(id) {
+  const t0 = startOfDay(Date.now());
+  const k = id ? S.promos.find((x) => x.id === id) : { name: "", type: "PERCENT_ORDER", value: 10, scope: "all", target: "", min: 0, max: 0, code: "", from: t0, to: t0 + 13 * 86400000, active: true };
+  const iso = (t) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  modal(`<div class="dialog" role="dialog" aria-modal="true" aria-label="Khuyến mãi"><form id="kform">
+    <div class="card-h"><h3>${id ? "Sửa khuyến mãi" : "Tạo khuyến mãi"}</h3><button type="button" class="btn ghost sm" data-act="close">Đóng</button></div>
+    <div class="card-b">
+      <label class="field"><span>Tên chương trình</span><input id="k-name" class="input" required value="${esc(k.name)}" placeholder="VD: Cuối tuần giảm 10%"></label>
+      <label class="field"><span>Loại khuyến mãi</span><select id="k-type" class="select">${Object.entries(PROMO_TYPE).map(([t, l]) => `<option value="${t}" ${t === k.type ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+      <div class="methods"><label class="field"><span id="k-value-l">Giá trị</span><input id="k-value" class="input num" inputmode="numeric" value="${k.value}"></label>
+        <label class="field k-order"><span>Đơn tối thiểu (đ)</span><input id="k-min" class="input num" inputmode="numeric" value="${k.min || ""}" placeholder="0"></label></div>
+      <div class="methods k-item"><label class="field"><span>Áp dụng cho</span><select id="k-scope" class="select"><option value="cat" ${k.scope === "cat" ? "selected" : ""}>Một danh mục</option><option value="product" ${k.scope === "product" ? "selected" : ""}>Một sản phẩm</option><option value="all" ${k.scope === "all" ? "selected" : ""}>Mọi sản phẩm</option></select></label>
+        <label class="field"><span>Chọn</span><select id="k-target" class="select"></select></label></div>
+      <div class="methods k-order"><label class="field k-pct"><span>Giảm tối đa (đ)</span><input id="k-max" class="input num" inputmode="numeric" value="${k.max || ""}" placeholder="Không giới hạn"></label>
+        <label class="field"><span>Mã giảm giá (tùy chọn)</span><input id="k-code" class="input mono" value="${esc(k.code)}" placeholder="Để trống: tự áp dụng" style="text-transform:uppercase"></label></div>
+      <div class="methods"><label class="field"><span>Từ ngày</span><input id="k-from" type="date" class="input" value="${iso(k.from)}"></label><label class="field"><span>Đến hết ngày</span><input id="k-to" type="date" class="input" value="${iso(k.to)}"></label></div>
+      <p id="k-err" class="down" style="margin:0" hidden></p>
+      <button class="btn lg" type="submit">${id ? "Lưu thay đổi" : "Tạo khuyến mãi"}</button>
+    </div></form></div>`);
+  const $ = (x) => document.getElementById("k-" + x);
+  const sync = () => {
+    const type = $("type").value, item = type === "PERCENT_ITEM" || type === "BUY_X_GET_1";
+    document.querySelectorAll(".k-item").forEach((el) => (el.style.display = item ? "" : "none"));
+    document.querySelectorAll(".k-order").forEach((el) => (el.style.display = item ? "none" : ""));
+    document.querySelector(".k-pct").style.visibility = type === "PERCENT_ORDER" ? "" : "hidden";
+    $("value-l").textContent = { PERCENT_ITEM: "Giảm (%)", BUY_X_GET_1: "Mua bao nhiêu thì tặng 1", PERCENT_ORDER: "Giảm (%)", FIXED_ORDER: "Giảm (đ)" }[type];
+    if (type === "BUY_X_GET_1" && $("scope").value !== "product") $("scope").value = "product";
+    const scope = $("scope").value, cur = $("target").value || k.target;
+    $("target").disabled = scope === "all";
+    $("target").innerHTML = scope === "cat" ? CATS().map((c) => `<option ${c === cur ? "selected" : ""}>${c}</option>`).join("") : scope === "product" ? S.products.filter((p) => p.active).map((p) => `<option value="${p.id}" ${p.id === cur ? "selected" : ""}>${esc(p.name)}</option>`).join("") : "<option>Mọi sản phẩm</option>";
+  };
+  $("type").addEventListener("change", sync); $("scope").addEventListener("change", () => { $("target").value = ""; sync(); });
+  sync();
+  document.getElementById("kform").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const err = (m) => { $("err").textContent = m; $("err").hidden = false; };
+    const num = (x) => Number($(x).value.replace(/\D/g, "")) || 0;
+    const type = $("type").value, item = type === "PERCENT_ITEM" || type === "BUY_X_GET_1";
+    const value = num("value"), code = item ? "" : $("code").value.trim().toUpperCase().replace(/\s/g, "");
+    const from = new Date($("from").value + "T00:00").getTime(), to = new Date($("to").value + "T00:00").getTime();
+    if (!$("name").value.trim()) return err("Vui lòng nhập tên chương trình");
+    if (!value) return err("Giá trị phải lớn hơn 0");
+    if ((type === "PERCENT_ITEM" || type === "PERCENT_ORDER") && value > 90) return err("Giảm tối đa 90%");
+    if (!(from <= to)) return err("Ngày kết thúc phải sau ngày bắt đầu");
+    if (code && S.promos.some((x) => x.code === code && x.id !== id)) return err(`Mã ${code} đã được dùng`);
+    const data = { name: $("name").value.trim(), type, value, scope: item ? $("scope").value : "all", target: item && $("scope").value !== "all" ? $("target").value : "", min: item ? 0 : num("min"), max: type === "PERCENT_ORDER" ? num("max") : 0, code, from, to };
+    if (id) Object.assign(k, data); else S.promos.push({ id: "km" + Date.now(), ...data, active: true });
+    save(); closeModal(); toast(id ? "Đã lưu khuyến mãi" : `Đã tạo ${data.name}`); render();
+  });
+}
+
+// ===================== Cài đặt =====================
+function settingsView() {
+  const st = store();
+  const ready = st.bankBin && st.account;
+  return head("Cài đặt cửa hàng", "Thông tin in trên hóa đơn và tài khoản nhận tiền VietQR") + `
+  <div class="grid two">
+    <div class="card"><div class="card-h"><h3>Thông tin cửa hàng</h3></div>
+      <form class="card-b" id="store-form" style="display:grid;gap:14px">
+        <label class="field"><span>Tên cửa hàng</span><input class="input" name="name" required value="${esc(st.name)}"></label>
+        <label class="field"><span>Địa chỉ</span><input class="input" name="address" value="${esc(st.address)}"></label>
+        <label class="field"><span>Số điện thoại</span><input class="input" name="phone" value="${esc(st.phone ?? "")}"></label>
+        <div style="border-top:1px solid var(--line);padding-top:14px"><b>Tài khoản nhận tiền VietQR</b><p style="margin:2px 0 0;color:var(--muted);font-size:13px">Mã QR ở quầy chuyển tiền thẳng vào tài khoản này, kèm sẵn số tiền và mã đơn.</p></div>
+        <label class="field"><span>Ngân hàng</span><select class="select" name="bankBin"><option value="">Chưa chọn</option>${BANKS.map(([b, n]) => `<option value="${b}" ${b === st.bankBin ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+        <label class="field"><span>Số tài khoản</span><input class="input" name="account" inputmode="numeric" value="${esc(st.account)}"></label>
+        <label class="field"><span>Tên chủ tài khoản</span><input class="input" name="holder" value="${esc(st.holder)}"><small style="color:var(--faint);font-size:12px">Tự đổi sang in hoa không dấu như trên app ngân hàng</small></label>
+        <div style="display:flex;gap:10px;align-items:center"><button class="btn" data-act="save-store">Lưu cài đặt</button><span id="store-msg" style="font-size:13px;color:var(--bad)"></span></div>
+      </form></div>
+    <div style="display:grid;gap:16px;align-content:start">
+      <div class="card"><div class="card-h"><h3>Mã QR mẫu ở quầy</h3><span class="pill ${ready ? "good" : "warn"}">${ready ? "Sẵn sàng" : "Chưa cấu hình"}</span></div><div class="card-b">
+        ${ready ? `<div class="qr">${qrSvg(vietQrPayload(10000, "DEMO"))}<div class="bank"><b>${bankName(st.bankBin)}</b> · ${esc(st.account)}<br>${esc(st.holder)}<br>Đơn mẫu 10.000 ₫, nội dung <b>DEMO</b></div></div>` : '<div class="empty">Chọn ngân hàng và nhập số tài khoản để bật thanh toán VietQR</div>'}
+      </div></div>
+      <div class="card"><div class="card-h"><h3>Đầu hóa đơn</h3></div><div class="card-b"><div class="receipt" style="margin:0 auto">
+        <b style="text-align:center">${esc(st.name.toUpperCase())}</b><span style="text-align:center">${esc(st.address)}</span>${st.phone ? `<span style="text-align:center">ĐT: ${esc(st.phone)}</span>` : ""}<hr><span style="text-align:center">HÓA ĐƠN BÁN HÀNG</span>
+      </div></div></div>
+    </div>
+  </div>`;
+}
+function saveStore() {
+  const f = new FormData(document.getElementById("store-form"));
+  const v = (k) => String(f.get(k) ?? "").trim();
+  const msg = (t) => { document.getElementById("store-msg").textContent = t; };
+  const account = v("account").replace(/\s/g, "");
+  if (!v("name")) return msg("Vui lòng nhập tên cửa hàng");
+  if (account && !/^\d{6,19}$/.test(account)) return msg("Số tài khoản chỉ gồm 6 đến 19 chữ số");
+  S.store = { name: v("name"), address: v("address"), phone: v("phone"), bankBin: v("bankBin"), account,
+    holder: v("holder").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "D").toUpperCase() };
+  save(); toast("Đã lưu cài đặt cửa hàng"); render();
+}
+
+const VIEWS = { dashboard: dashboardView, pos: posView, orders: ordersView, products: productsView, inventory: inventoryView, reports: reportsView, staff: staffView, channels: channelsView, settings: settingsView, promos: promosView };
+
+// ===================== Hộp thoại =====================
+function modal(html) { document.getElementById("modal").innerHTML = `<div class="overlay" data-act="overlay">${html}</div>`; }
+function closeModal() { document.getElementById("modal").innerHTML = ""; }
+
+// ===================== Sự kiện =====================
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-act]");
+  if (!t) return;
+  const a = t.dataset.act;
+  if (a === "overlay") { if (e.target === t) closeModal(); return; }
+  if (t.tagName === "A" || t.tagName === "BUTTON") e.preventDefault();
+  switch (a) {
+    case "login": S.user = t.dataset.id; ui.cart = []; save(); location.hash = ""; render(); break;
+    case "logout": S.user = null; save(); closeModal(); render(); break;
+    case "reset": { const u = S.user; S = seedState(); S.user = u; ui.cart = []; save(); toast("Đã khôi phục dữ liệu mẫu"); render(); break; }
+    case "cat": ui.cat = t.dataset.cat; render(); break;
+    case "add": addToCart(t.dataset.id); break;
+    case "dec": { const l = ui.cart.find((x) => x.pid === t.dataset.id); l.qty--; if (!l.qty) ui.cart = ui.cart.filter((x) => x !== l); render(); break; }
+    case "clear": ui.cart = []; ui.discountPct = 0; render(); break;
+    case "demo-scan": { const pool = S.products.filter((p) => p.qty > 0); const p = pool[Math.floor(Math.random() * pool.length)]; toast(`Quét ${p.barcode}: ${p.name}`); addToCart(p.id); break; }
+    case "pay": openPay(); break;
+    case "method": ui.payMethod = t.dataset.m; openPay(); break;
+    case "cash": ui.cashGiven = t.dataset.v; openPay(); break;
+    case "confirm-pay": { const given = Number(String(ui.cashGiven).replace(/\D/g, "")) || cartTotals().total; checkout(ui.payMethod, ui.payMethod === "CASH" ? given : undefined); break; }
+    case "close": closeModal(); if (ui.view === "pos") document.getElementById("scan")?.focus(); break;
+    case "ofilter": ui.orderFilter = t.dataset.f; render(); break;
+    case "order": openOrder(t.dataset.code); break;
+    case "cancel-order": cancelOrder(t.dataset.code); break;
+    case "new-product": openProduct(null); break;
+    case "edit-product": openProduct(t.dataset.id); break;
+    case "tab": ui.tab[t.dataset.scope] = t.dataset.tab; render(); break;
+    case "receive": openStock(t.dataset.id, "receive"); break;
+    case "count": openStock(t.dataset.id, "count"); break;
+    case "toggle-staff": { const u = S.staff.find((x) => x.id === t.dataset.id); u.active = !u.active; save(); toast(u.active ? `Đã mở khóa ${u.name}` : `Đã khóa ${u.name}`); render(); break; }
+    case "connect": { const c = S.channels[t.dataset.ch]; Object.assign(c, { connected: true, since: Date.now(), secret: randomHex(24) }); save(); toast(`Đã kết nối ${CHANNEL_INFO[t.dataset.ch].name}, đã cấp secret webhook mới`); render(); break; }
+    case "disconnect": S.channels[t.dataset.ch].connected = false; save(); toast(`Đã ngắt ${CHANNEL_INFO[t.dataset.ch].name}, đơn mới từ sàn sẽ bị từ chối`); render(); break;
+    case "mapping": openMapping(t.dataset.ch); break;
+    case "automap": { const ch = t.dataset.ch, c = S.channels[ch]; let n = 0; for (const p of S.products) if (p.active && !c.map[p.id]) { c.map[p.id] = PLATFORM[ch].prefix + "-" + p.sku; n++; } save(); toast(`Đã liên kết thêm ${n} sản phẩm`); render(); openMapping(ch); break; }
+    case "save-store": saveStore(); break;
+    case "ifilter": ui.invFilter = t.dataset.f; render(); break;
+    case "new-promo": openPromo(null); break;
+    case "edit-promo": openPromo(t.dataset.id); break;
+    case "toggle-promo": { const k = S.promos.find((x) => x.id === t.dataset.id); k.active = !k.active; save(); toast(k.active ? `Đã bật lại ${k.name}` : `Đã tạm dừng ${k.name}`); render(); break; }
+    case "clear-image": ui.draftImage = null; document.getElementById("f-thumb").innerHTML = thumb({ ...ui.editing, image: null }, "lg"); t.remove(); break;
+    case "go-settings": closeModal(); go("settings"); break;
+    case "days": ui.days = Number(t.dataset.d); render(); break;
+    case "sim": simulateOnlineOrder(t.dataset.ch); break;
+  }
+});
+document.addEventListener("change", (e) => {
+  const t = e.target;
+  if (t.id === "discount") { ui.discountPct = Number(t.value); render(); }
+  if (t.dataset.act === "sku") {
+    const c = S.channels[t.dataset.ch], sku = t.value.trim();
+    const clash = sku && Object.entries(c.map).find(([pid, v]) => v === sku && pid !== t.dataset.id);
+    if (clash) { toast(`SKU ${sku} đã gán cho ${prod(clash[0]).name}`); t.value = c.map[t.dataset.id] ?? ""; return; }
+    if (sku) c.map[t.dataset.id] = sku; else delete c.map[t.dataset.id];
+    save(); toast(sku ? "Đã lưu liên kết" : "Đã bỏ liên kết"); render();
+  }
+  if (t.dataset.act === "role") { const u = S.staff.find((x) => x.id === t.dataset.id); u.role = t.value; save(); toast(`${u.name} giờ là ${S.roles[u.role].name}`); render(); }
+  if (t.dataset.act === "perm") {
+    const r = S.roles[t.dataset.role];
+    r.perms = t.checked ? [...r.perms, t.dataset.perm] : r.perms.filter((p) => p !== t.dataset.perm);
+    save(); toast("Đã lưu phân quyền");
+  }
+});
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (t.id === "scan") { ui.q = t.value; const pos = t.selectionStart; render(); const el = document.getElementById("scan"); el.focus(); el.setSelectionRange(pos, pos); }
+  for (const [id, key] of [["oq", "orderQ"], ["iq", "invQ"], ["voucher", "voucher"]]) if (t.id === id) { ui[key] = t.value; const pos = t.selectionStart; render(); const el = document.getElementById(id); el.focus(); el.setSelectionRange(pos, pos); }
+  if (t.id === "pq") { ui.productQ = t.value; const pos = t.selectionStart; render(); const el = document.getElementById("pq"); el.focus(); el.setSelectionRange(pos, pos); }
+  if (t.id === "cash") {
+    ui.cashGiven = t.value.replace(/\D/g, "");
+    const total = cartTotals().total, given = Number(ui.cashGiven) || 0;
+    const out = t.closest(".card-b").querySelector(".total .num");
+    out.textContent = given ? (given >= total ? money(given - total) : "Chưa đủ") : "—";
+    out.classList.toggle("down", !!given && given < total);
+    t.closest(".card-b").querySelector('[data-act="confirm-pay"]').disabled = !!given && given < total;
+  }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeModal();
+  if (e.key === "Enter" && e.target.id === "scan") {
+    const q = ui.q.trim().toLowerCase();
+    const exact = S.products.find((p) => p.barcode === q || p.sku.toLowerCase() === q);
+    const matches = S.products.filter((p) => p.active && p.name.toLowerCase().includes(q));
+    const hit = exact ?? (matches.length === 1 ? matches[0] : null);
+    if (hit) { ui.q = ""; addToCart(hit.id); }
+  }
+});
+window.addEventListener("hashchange", render);
+render();
+</script>
