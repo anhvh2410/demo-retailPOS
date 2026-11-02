@@ -1891,7 +1891,7 @@ document.addEventListener("input", (e) => {
   if (t.id === "pq") { ui.productQ = t.value; const pos = t.selectionStart; render(); const el = document.getElementById("pq"); el.focus(); el.setSelectionRange(pos, pos); }
   if (t.id === "cash") {
     ui.cashGiven = t.value.replace(/\D/g, "");
-    const total = cartTotals().total, given = Number(ui.cashGiven) || 0;
+    const total = cartTotals().due, given = Number(ui.cashGiven) || 0;
     const out = t.closest(".card-b").querySelector(".total .num");
     out.textContent = given ? (given >= total ? money(given - total) : "Chưa đủ") : "—";
     out.classList.toggle("down", !!given && given < total);
